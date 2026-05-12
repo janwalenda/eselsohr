@@ -1,0 +1,151 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+:root {
+  --sidebar: oklch(98% 0 0);
+  --sidebar-foreground: oklch(14.5% 0 0);
+  --sidebar-primary: oklch(20.5% 0 0);
+  --sidebar-primary-foreground: oklch(98% 0 0);
+  --sidebar-accent: oklch(97% 0 0);
+  --sidebar-accent-foreground: oklch(20.5% 0 0);
+  --sidebar-border: oklch(92.2% 0 0);
+  --sidebar-ring: oklch(70.8% 0 0);
+
+  /* Defaults; SidebarProvider may override on the wrapper element. */
+  --sidebar-width: 16rem;
+  --sidebar-width-icon: 3rem;
+  --sidebar-width-mobile: 18rem;
+}
+
+@theme inline {
+  --radius-lg: 0.5rem;
+  --radius-md: calc(var(--radius-lg) - 2px);
+  --radius-sm: calc(var(--radius-lg) - 4px);
+
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(14.5% 0 0);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(14.5% 0 0);
+  --color-primary: oklch(20.5% 0 0);
+  --color-primary-foreground: oklch(98% 0 0);
+  --color-secondary: oklch(97% 0 0);
+  --color-secondary-foreground: oklch(20.5% 0 0);
+  --color-muted: oklch(97% 0 0);
+  --color-muted-foreground: oklch(55.6% 0 0);
+  --color-accent: oklch(97% 0 0);
+  --color-accent-foreground: oklch(20.5% 0 0);
+  --color-border: oklch(92.2% 0 0);
+  --color-input: oklch(92.2% 0 0);
+  --color-ring: oklch(70.8% 0 0);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+@layer utilities {
+  .w-sidebar {
+    width: var(--sidebar-width);
+  }
+
+  .w-sidebar-icon {
+    width: var(--sidebar-width-icon);
+  }
+}
+
+/* Collaborative editor: typography handles base prose; these cover the bits it
+   doesn't (Collectives callouts, task lists, remote collaboration carets). */
+.nc-text-prose:focus {
+  outline: none;
+}
+
+.nc-text-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.nc-text-prose ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.nc-text-prose ul[data-type='taskList'] li > label {
+  margin-top: 0.3rem;
+}
+
+.nc-text-prose .callout {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border-inline-start: 0.3em solid var(--callout-border, var(--color-primary));
+  background-color: color-mix(in oklch, var(--callout-border, var(--color-primary)) 12%, transparent);
+}
+
+.nc-text-prose .callout > :first-child {
+  margin-top: 0;
+}
+
+.nc-text-prose .callout > :last-child {
+  margin-bottom: 0;
+}
+
+.nc-text-prose .callout--info {
+  --callout-border: oklch(55% 0.12 240);
+}
+
+.nc-text-prose .callout--success {
+  --callout-border: oklch(55% 0.14 145);
+}
+
+.nc-text-prose .callout--warn {
+  --callout-border: oklch(70% 0.15 85);
+}
+
+.nc-text-prose .callout--error {
+  --callout-border: oklch(55% 0.18 25);
+}
+
+.nc-text-prose .callout--tip {
+  --callout-border: oklch(55% 0.16 300);
+}
+
+.nc-text-prose .collaboration-carets__caret {
+  border-left: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  position: relative;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.nc-text-prose .collaboration-carets__label {
+  border-radius: 3px 3px 3px 0;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 0.1rem 0.3rem;
+  position: absolute;
+  top: -1.4em;
+  user-select: none;
+  white-space: nowrap;
+}
