@@ -62,8 +62,16 @@ function toMessage(error: unknown) {
   return extractApiErrorMessage(error)
 }
 
-function isExpanded(page: CollectivePageNode) {
+function hasActiveDescendant(page: CollectivePageNode): boolean {
   if (page.id === props.activePageId) {
+    return true
+  }
+
+  return page.children.some(child => hasActiveDescendant(child))
+}
+
+function isExpanded(page: CollectivePageNode) {
+  if (hasActiveDescendant(page)) {
     return true
   }
 
@@ -71,13 +79,25 @@ function isExpanded(page: CollectivePageNode) {
 }
 
 function togglePage(page: CollectivePageNode) {
+  if (hasActiveDescendant(page) && isExpanded(page)) {
+    return
+  }
+
   if (isExpanded(page)) {
-    collapsedIds.value = collapsedIds.value.filter(id => id !== page.id)
-    collapsedIds.value.push(page.id)
+    collapsedIds.value = [...collapsedIds.value, page.id]
     return
   }
 
   collapsedIds.value = collapsedIds.value.filter(id => id !== page.id)
+}
+
+function handlePageLinkClick(page: CollectivePageNode, event: MouseEvent) {
+  if (page.children.length === 0) {
+    return
+  }
+
+  event.preventDefault()
+  togglePage(page)
 }
 
 const moveOptions = computed(() =>
@@ -161,7 +181,7 @@ async function handleDelete() {
       :key="page.id"
       class="space-y-1"
     >
-      <div class="group flex items-center gap-1">
+      <div class="group flex min-w-0 items-center gap-1">
         <Button
           v-if="page.children.length > 0"
           variant="ghost"
@@ -181,38 +201,42 @@ async function handleDelete() {
           :is-active="page.id === activePageId"
           class="flex-1"
         >
-          <NuxtLink :to="`/app/${collectiveId}/${page.id}`">
+          <NuxtLink :to="`/app/${collectiveId}/${page.id}`" @click="handlePageLinkClick(page, $event)">
             <FileTextIcon class="size-4" />
-            <span>{{ page.title }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ page.title }}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-6 shrink-0 opacity-0 transition group-hover:opacity-100"
+                  @click.stop
+                >
+                  <MoreHorizontalIcon class="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-48">
+                <DropdownMenuItem @select.prevent="createTarget = page">
+                  <FolderPlusIcon class="size-4" />
+                  Unterseite
+                </DropdownMenuItem>
+                <DropdownMenuItem @select.prevent="renameTarget = page">
+                  <PencilIcon class="size-4" />
+                  Umbenennen
+                </DropdownMenuItem>
+                <DropdownMenuItem @select.prevent="moveTarget = page">
+                  <WaypointsIcon class="size-4" />
+                  Verschieben
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" @select.prevent="deleteTarget = page">
+                  <Trash2Icon class="size-4" />
+                  Löschen
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </NuxtLink>
         </SidebarMenuSubButton>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="icon" class="size-6 opacity-0 transition group-hover:opacity-100">
-              <MoreHorizontalIcon class="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-48 bg-white/50 backdrop-blur-sm">
-            <DropdownMenuItem @select.prevent="createTarget = page">
-              <FolderPlusIcon class="size-4" />
-              Unterseite
-            </DropdownMenuItem>
-            <DropdownMenuItem @select.prevent="renameTarget = page">
-              <PencilIcon class="size-4" />
-              Umbenennen
-            </DropdownMenuItem>
-            <DropdownMenuItem @select.prevent="moveTarget = page">
-              <WaypointsIcon class="size-4" />
-              Verschieben
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" @select.prevent="deleteTarget = page">
-              <Trash2Icon class="size-4" />
-              Löschen
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <PageTree

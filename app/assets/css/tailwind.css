@@ -71,6 +71,10 @@
 
 /* Collaborative editor: typography handles base prose; these cover the bits it
    doesn't (Collectives callouts, task lists, remote collaboration carets). */
+.nc-text-prose a {
+  cursor: pointer;
+}
+
 .nc-text-prose:focus {
   outline: none;
 }
@@ -93,6 +97,7 @@
 .nc-text-prose .callout {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
+  overflow: visible;
   border-radius: var(--radius-md);
   border-inline-start: 0.3em solid var(--callout-border, var(--color-primary));
   background-color: color-mix(in oklch, var(--callout-border, var(--color-primary)) 12%, transparent);

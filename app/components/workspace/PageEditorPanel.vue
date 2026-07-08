@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { getPageBreadcrumb } from '@/composables/useCollectivePages'
+import { isLandingPage } from '~~/shared/collectives'
 import PageActions from '@/components/workspace/PageActions.vue'
 import PageBreadcrumb from '@/components/workspace/PageBreadcrumb.vue'
 import TextCollaborativeEditor from '@/components/workspace/TextCollaborativeEditor.vue'
@@ -23,8 +24,21 @@ const currentCollective = computed(() =>
   collectives.value.find(collective => collective.id === props.collectiveId) ?? null,
 )
 
-const currentTrail = computed(() => getPageBreadcrumb(pages.value, props.pageId))
+const currentTrail = computed(() =>
+  getPageBreadcrumb(pages.value, props.pageId).filter(page => !isLandingPage(page)),
+)
 const displayPage = computed(() => currentTrail.value.at(-1) ?? pagePayload.value?.page ?? null)
+
+const displayTitle = computed(() => {
+  const page = pagePayload.value?.page
+  const collective = currentCollective.value
+
+  if (page && collective && isLandingPage(page)) {
+    return collective.emoji ? `${collective.emoji} ${collective.name}` : collective.name
+  }
+
+  return displayPage.value?.title ?? ''
+})
 
 const routeErrorMessage = computed(() =>
   pagesError.value?.message || pageState.error.value?.message || '',
@@ -68,7 +82,7 @@ async function reloadEditor() {
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="space-y-1">
           <h1 class="text-3xl font-semibold tracking-tight">
-            {{ displayPage.title }}
+            {{ displayTitle }}
           </h1>
         </div>
 

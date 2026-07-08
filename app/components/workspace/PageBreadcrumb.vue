@@ -19,9 +19,12 @@ defineProps<{
   <Breadcrumb v-if="collective">
     <BreadcrumbList>
       <BreadcrumbItem>
-        <BreadcrumbLink as-child>
+        <BreadcrumbPage v-if="trail.length === 0">
+          {{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}
+        </BreadcrumbPage>
+        <BreadcrumbLink v-else as-child>
           <NuxtLink :to="`/app/${collective.id}`">
-            {{ collective.name }}
+            {{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}
           </NuxtLink>
         </BreadcrumbLink>
       </BreadcrumbItem>
@@ -29,7 +32,10 @@ defineProps<{
       <template v-for="page in trail" :key="page.id">
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink as-child>
+          <BreadcrumbPage v-if="page.id === trail.at(-1)?.id">
+            {{ page.title }}
+          </BreadcrumbPage>
+          <BreadcrumbLink v-else as-child>
             <NuxtLink :to="`/app/${collective.id}/${page.id}`">
               {{ page.title }}
             </NuxtLink>
