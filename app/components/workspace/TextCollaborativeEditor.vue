@@ -400,52 +400,71 @@ defineExpose({ session })
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('bold') }" :disabled="toolbarDisabled" @click="toggleBold">
           <BoldIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('italic') }" :disabled="toolbarDisabled" @click="toggleItalic">
           <ItalicIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('strike') }" :disabled="toolbarDisabled" @click="toggleStrike">
           <StrikethroughIcon class="size-4" />
         </Button>
+
         <Separator orientation="vertical" class="mx-1 h-6" />
+        
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 1 }) }" :disabled="toolbarDisabled" @click="setHeading(1)">
           <Heading1Icon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 2 }) }" :disabled="toolbarDisabled" @click="setHeading(2)">
           <Heading2Icon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 3 }) }" :disabled="toolbarDisabled" @click="setHeading(3)">
           <Heading3Icon class="size-4" />
         </Button>
+
         <Separator orientation="vertical" class="mx-1 h-6" />
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('bulletList') }" :disabled="toolbarDisabled" @click="toggleBullet">
           <ListIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('orderedList') }" :disabled="toolbarDisabled" @click="toggleOrdered">
           <ListOrderedIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('taskList') }" :disabled="toolbarDisabled" @click="toggleTask">
           <ListChecksIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('blockquote') }" :disabled="toolbarDisabled" @click="toggleQuote">
           <QuoteIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('codeBlock') }" :disabled="toolbarDisabled" @click="toggleCode">
           <Code2Icon class="size-4" />
         </Button>
+
         <Separator orientation="vertical" class="mx-1 h-6" />
+
         <Button variant="ghost" size="icon" :disabled="toolbarDisabled" @click="promptLink">
           <LinkIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :disabled="toolbarDisabled" @click="insertImageAction">
           <ImageIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :disabled="toolbarDisabled" @click="insertTableAction">
           <TableIcon class="size-4" />
         </Button>
+
         <Separator orientation="vertical" class="mx-1 h-6" />
+
         <Button variant="ghost" size="icon" :disabled="toolbarDisabled || isSourceMode" @click="editor.chain().focus().undo().run()">
           <UndoIcon class="size-4" />
         </Button>
+
         <Button variant="ghost" size="icon" :disabled="toolbarDisabled || isSourceMode" @click="editor.chain().focus().redo().run()">
           <RedoIcon class="size-4" />
         </Button>
