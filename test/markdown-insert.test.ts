@@ -11,6 +11,7 @@ import {
   wrapSelection,
 } from '../app/lib/nc-text/editor/markdown-insert'
 import { serializeMarkdown } from '../app/lib/nc-text/editor/markdown-serializer'
+import { shouldApplySourceMarkdownOnModeSwitch } from '../app/lib/nc-text/editor/source-mode'
 
 function createTextarea(initial = '', start = initial.length, end = initial.length) {
   const textarea = document.createElement('textarea')
@@ -86,5 +87,15 @@ describe('apply-markdown', () => {
     const markdown = serializeMarkdown(node)
     expect(markdown).toContain('## Heading')
     expect(markdown).toContain('**bold**')
+  })
+})
+
+describe('source-mode', () => {
+  it('does not apply stale source markdown when remote changes arrived', () => {
+    expect(shouldApplySourceMarkdownOnModeSwitch(true)).toBe(false)
+  })
+
+  it('applies source markdown when no remote staleness was detected', () => {
+    expect(shouldApplySourceMarkdownOnModeSwitch(false)).toBe(true)
   })
 })

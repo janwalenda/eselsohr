@@ -36,6 +36,7 @@ import {
 } from '@/lib/nc-text/editor/markdown-insert'
 import { serializeMarkdown } from '@/lib/nc-text/editor/markdown-serializer'
 import { seedInitialContent } from '@/lib/nc-text/editor/seed'
+import { shouldApplySourceMarkdownOnModeSwitch } from '@/lib/nc-text/editor/source-mode'
 import { useTextSession } from '@/composables/useTextSession'
 
 const props = defineProps<{
@@ -169,7 +170,9 @@ function switchViewMode(next: ViewMode) {
   const previous = viewMode.value
 
   if (previous === 'source' && next !== 'source') {
-    applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value)
+    if (shouldApplySourceMarkdownOnModeSwitch(sourceRemoteStale.value)) {
+      applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value)
+    }
     sourceRemoteStale.value = false
   }
   else if (previous !== 'source' && next === 'source') {
