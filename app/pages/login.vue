@@ -123,6 +123,11 @@ async function startLoginFlow() {
   pollingStopped = false
   clearPollTimer()
 
+  // Safari on iOS only allows popups opened directly
+  // from the user gesture. Open a placeholder tab first,
+  // then navigate it after the async login request resolves.
+  const popup = window.open('', '_blank', 'noopener,noreferrer')
+
   try {
     const { loginUrl } = await $fetch<{ loginUrl: string }>('/api/nc/login/start', {
       method: 'POST',
@@ -131,11 +136,18 @@ async function startLoginFlow() {
 
     awaitingReturn.value = true
     loading.value = false
+    beginPolling()
 
-    // Same-tab redirect: works on mobile and in embedded browsers (no pop-up).
-    window.location.assign(loginUrl)
+    if (popup) {
+      popup.location.href = loginUrl
+    }
+    else {
+      // Fallback when popup creation is still blocked.
+      window.location.href = loginUrl
+    }
   }
   catch (error) {
+    popup?.close()
     loading.value = false
     awaitingReturn.value = false
     errorMessage.value = normalizeErrorMessage(error)
@@ -190,8 +202,8 @@ onBeforeUnmount(() => {
         Mit deiner Nextcloud verbinden
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">
-        Gib die URL deiner Nextcloud-Instanz an. Die Freigabe läuft im gleichen Browser-Tab
-        (kein Pop-up) – optimiert für Mobilgeräte.
+        Gib die URL deiner Nextcloud-Instanz an. Die Freigabe wird in einem neuen Tab geoeffnet,
+        waehrend Eselsohr hier auf die Bestaetigung wartet.
       </p>
     </div>
 
@@ -227,8 +239,8 @@ onBeforeUnmount(() => {
             Verbinde mit Nextcloud… Sobald du die Freigabe bestätigt hast, geht es automatisch weiter.
           </template>
           <template v-else>
-            Nach der Freigabe in Nextcloud: mit dem Zurück-Button hierher zurückkehren
-            oder unten „Verbindung prüfen“ tippen.
+            Falls der neue Tab nicht automatisch geoeffnet wurde, pruefe den Pop-up-Blocker
+            oder tippe unten auf „Verbindung pruefen“.
           </template>
         </p>
         <p v-if="ncUrl" class="truncate text-xs text-muted-foreground">

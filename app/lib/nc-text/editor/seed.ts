@@ -8,24 +8,16 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { getSchema } from '@tiptap/core'
-import { DOMParser } from '@tiptap/pm/model'
 import { prosemirrorToYXmlFragment } from 'y-prosemirror'
 import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from 'yjs'
-import { buildExtensions } from './extensions'
-import markdownit from './markdownit'
+import { markdownToProseMirrorNode } from './apply-markdown'
 
 export function seedInitialContent(ydoc: Doc, content: string) {
   if (!content?.trim()) {
     return
   }
 
-  const html = `${markdownit.render(content)} `
-  const schema = getSchema(buildExtensions({ editing: false }))
-
-  const container = window.document.createElement('div')
-  container.innerHTML = html
-  const node = DOMParser.fromSchema(schema).parse(container)
+  const node = markdownToProseMirrorNode(content)
 
   const baseDoc = new Doc()
   // Idempotent initial state requires a fixed clientID (see Text PR #5589).

@@ -11,7 +11,7 @@ const props = defineProps<{
   activePageId?: number | null
 }>()
 
-const { pages, pending, error, flatPages, createPage, updatePage, deletePage } = useCollectivePages(
+const { sidebarPages, pending, error, flatPages, createPage, updatePage, deletePage } = useCollectivePages(
   () => props.collectiveId,
 )
 </script>
@@ -35,7 +35,7 @@ const { pages, pending, error, flatPages, createPage, updatePage, deletePage } =
   <PageTree
     v-else
     :collective-id="collectiveId"
-    :nodes="pages"
+    :nodes="sidebarPages"
     :flat-pages="flatPages"
     :active-page-id="activePageId"
     :create-page="createPage"

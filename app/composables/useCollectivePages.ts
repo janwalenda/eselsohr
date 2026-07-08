@@ -6,6 +6,7 @@ import type {
 } from '~~/shared/collectives'
 import type { MaybeRefOrGetter } from 'vue'
 import { computed, toValue } from 'vue'
+import { isLandingPage } from '~~/shared/collectives'
 
 export function flattenPageTree(nodes: CollectivePageNode[]): CollectivePage[] {
   return nodes.flatMap(node => [node, ...flattenPageTree(node.children)])
@@ -39,6 +40,22 @@ export function getPageBreadcrumb(nodes: CollectivePageNode[], pageId: number): 
   }
 
   return []
+}
+
+/** Sidebar tree with the collective landing page (`Readme.md`) folded into the root. */
+export function sidebarPageTree(nodes: CollectivePageNode[]): CollectivePageNode[] {
+  const sidebarNodes: CollectivePageNode[] = []
+
+  for (const node of nodes) {
+    if (isLandingPage(node)) {
+      sidebarNodes.push(...node.children)
+      continue
+    }
+
+    sidebarNodes.push(node)
+  }
+
+  return sidebarNodes
 }
 
 export function useCollectivePages(collectiveIdSource: MaybeRefOrGetter<number | string>) {
@@ -104,11 +121,15 @@ export function useCollectivePages(collectiveIdSource: MaybeRefOrGetter<number |
   }
 
   const flatPages = computed(() => flattenPageTree(asyncData.data.value ?? []))
+  const landingPage = computed(() => flatPages.value.find(page => isLandingPage(page)) ?? null)
+  const sidebarPages = computed(() => sidebarPageTree(asyncData.data.value ?? []))
 
   return {
     ...asyncData,
     pages: asyncData.data,
     flatPages,
+    landingPage,
+    sidebarPages,
     refreshPages,
     createPage,
     updatePage,

@@ -39,6 +39,8 @@ export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtens
     // Undo/redo is handled by the Collaboration extension, so disable the
     // built-in history. Underline has no markdown representation, so omit it to
     // keep round-tripping clean.
+    // Prevent accidental navigation while editing; clicks are handled in
+    // TextCollaborativeEditor (reading mode + Cmd/Ctrl+click in edit mode).
     StarterKit.configure({
       undoRedo: false,
       underline: false,

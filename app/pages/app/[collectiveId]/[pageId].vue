@@ -11,7 +11,7 @@ const pageId = computed(() => Number(route.params.pageId))
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
+  <div class="h-full overflow-hidden">
     <PageEditorPanel
       v-if="Number.isFinite(collectiveId) && Number.isFinite(pageId)"
       :key="`${collectiveId}-${pageId}`"
