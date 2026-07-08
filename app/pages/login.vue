@@ -123,6 +123,11 @@ async function startLoginFlow() {
   pollingStopped = false
   clearPollTimer()
 
+  // Safari on iOS only allows popups opened directly
+  // from the user gesture. Open a placeholder tab first,
+  // then navigate it after the async login request resolves.
+  const popup = window.open('', '_blank', 'noopener,noreferrer')
+
   try {
     const { loginUrl } = await $fetch<{ loginUrl: string }>('/api/nc/login/start', {
       method: 'POST',
@@ -133,9 +138,16 @@ async function startLoginFlow() {
     loading.value = false
     beginPolling()
 
-    window.open(loginUrl, '_blank', 'noopener,noreferrer')
+    if (popup) {
+      popup.location.href = loginUrl
+    }
+    else {
+      // Fallback when popup creation is still blocked.
+      window.location.href = loginUrl
+    }
   }
   catch (error) {
+    popup?.close()
     loading.value = false
     awaitingReturn.value = false
     errorMessage.value = normalizeErrorMessage(error)
