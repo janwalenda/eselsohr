@@ -71,7 +71,7 @@
 
 /* Collaborative editor: typography handles base prose; these cover the bits it
    doesn't (Collectives callouts, task lists, remote collaboration carets). */
-.nc-text-prose a {
+/* .nc-text-prose a {
   cursor: pointer;
 }
 
@@ -131,6 +131,17 @@
   --callout-border: oklch(55% 0.16 300);
 }
 
+.nc-text-prose .tableWrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+.nc-text-prose .tableWrapper table {
+  width: max-content;
+  min-width: 100%;
+}
+
 .nc-text-prose .collaboration-carets__caret {
   border-left: 1px solid currentColor;
   border-right: 1px solid currentColor;
@@ -153,4 +164,4 @@
   top: -1.4em;
   user-select: none;
   white-space: nowrap;
-}
+} */

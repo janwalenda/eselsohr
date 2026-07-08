@@ -6,9 +6,9 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 </script>
 
 <template>
-  <SidebarProvider :default-open="true" class="flex min-h-svh w-full">
+  <SidebarProvider :default-open="true" class="flex h-dvh overflow-hidden w-full">
     <AppSidebar />
-    <SidebarInset class="min-h-dvh">
+    <SidebarInset class="flex h-dvh flex-col overflow-hidden">
       <header class="border-b border-border px-3 py-3">
         <div class="flex items-center gap-3">
           <SidebarTrigger />

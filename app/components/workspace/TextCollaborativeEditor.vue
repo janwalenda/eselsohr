@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import {
   BoldIcon,
@@ -67,6 +67,7 @@ const apiFetch = useApiFetch()
 const viewMode = ref<ViewMode>('editing')
 const sourceMarkdown = ref('')
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const sourceEditorRef = ref<HTMLDivElement | null>(null)
 const sourceRemoteStale = ref(false)
 
 const editor = useEditor({
@@ -78,7 +79,7 @@ const editor = useEditor({
   }),
   editorProps: {
     attributes: {
-      class: 'nc-text-prose prose dark:prose-invert max-w-none min-h-[60vh] px-0 py-2 focus:outline-none',
+      class: 'prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-[700px] px-0 py-2 focus:outline-none',
     },
     handleClick(_view, _pos, event) {
       if (event.button !== 0) {
@@ -154,11 +155,139 @@ function sourceTextarea() {
   return sourceTextareaRef.value
 }
 
+function sourceEditor() {
+  return sourceEditorRef.value
+}
+
+function ensureSourceProxy() {
+  let proxy = sourceTextarea()
+  if (proxy) {
+    return proxy
+  }
+  proxy = window.document.createElement('textarea')
+  proxy.spellcheck = false
+  sourceTextareaRef.value = proxy
+  return proxy
+}
+
+function readEditorSelectionOffsets(editorEl: HTMLDivElement) {
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    return { start: 0, end: 0 }
+  }
+  const range = selection.getRangeAt(0)
+  if (!editorEl.contains(range.startContainer) || !editorEl.contains(range.endContainer)) {
+    const length = editorEl.textContent?.length ?? 0
+    return { start: length, end: length }
+  }
+
+  const preStartRange = range.cloneRange()
+  preStartRange.selectNodeContents(editorEl)
+  preStartRange.setEnd(range.startContainer, range.startOffset)
+  const start = preStartRange.toString().length
+
+  const preEndRange = range.cloneRange()
+  preEndRange.selectNodeContents(editorEl)
+  preEndRange.setEnd(range.endContainer, range.endOffset)
+  const end = preEndRange.toString().length
+
+  return { start, end }
+}
+
+function setEditorSelectionOffsets(editorEl: HTMLDivElement, start: number, end: number) {
+  const selection = window.getSelection()
+  if (!selection) {
+    return
+  }
+
+  if (!editorEl.firstChild) {
+    editorEl.appendChild(window.document.createTextNode(''))
+  }
+
+  const range = window.document.createRange()
+  const walker = window.document.createTreeWalker(editorEl, NodeFilter.SHOW_TEXT)
+  let currentNode = walker.nextNode()
+  let position = 0
+  let startNode: Node | null = null
+  let startOffset = 0
+  let endNode: Node | null = null
+  let endOffset = 0
+
+  while (currentNode) {
+    const textLength = currentNode.textContent?.length ?? 0
+    const nextPosition = position + textLength
+    if (!startNode && start <= nextPosition) {
+      startNode = currentNode
+      startOffset = Math.max(0, start - position)
+    }
+    if (!endNode && end <= nextPosition) {
+      endNode = currentNode
+      endOffset = Math.max(0, end - position)
+    }
+    if (startNode && endNode) {
+      break
+    }
+    position = nextPosition
+    currentNode = walker.nextNode()
+  }
+
+  const fallbackNode = editorEl.lastChild ?? editorEl
+  range.setStart(startNode ?? fallbackNode, startNode ? startOffset : fallbackNode.textContent?.length ?? 0)
+  range.setEnd(endNode ?? fallbackNode, endNode ? endOffset : fallbackNode.textContent?.length ?? 0)
+
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
+function syncProxyFromEditor() {
+  const editorEl = sourceEditor()
+  const proxy = ensureSourceProxy()
+  if (!editorEl) {
+    proxy.value = sourceMarkdown.value
+    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length)
+    return proxy
+  }
+
+  const text = editorEl.textContent ?? ''
+  const { start, end } = readEditorSelectionOffsets(editorEl)
+  proxy.value = text
+  proxy.setSelectionRange(start, end)
+  return proxy
+}
+
+function syncEditorFromMarkdown(selection?: { start: number, end: number }) {
+  const editorEl = sourceEditor()
+  if (!editorEl) {
+    return
+  }
+  const nextText = sourceMarkdown.value
+  if ((editorEl.textContent ?? '') !== nextText) {
+    editorEl.textContent = nextText
+  }
+  if (selection) {
+    editorEl.focus()
+    setEditorSelectionOffsets(editorEl, selection.start, selection.end)
+  }
+}
+
+function applySourceEdit(mutator: (textarea: HTMLTextAreaElement) => void) {
+  const proxy = syncProxyFromEditor()
+  mutator(proxy)
+  sourceMarkdown.value = proxy.value
+  syncEditorFromMarkdown({
+    start: proxy.selectionStart,
+    end: proxy.selectionEnd,
+  })
+  markDirty()
+}
+
 function markDirty() {
   session.dirty.value = true
 }
 
 function onSourceInput() {
+  const editorEl = sourceEditor()
+  sourceMarkdown.value = editorEl?.textContent ?? ''
   markDirty()
 }
 
@@ -187,10 +316,7 @@ function switchViewMode(next: ViewMode) {
 
 function toggleBold() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      wrapSelection(textarea, '**')
-    }
+    applySourceEdit(textarea => wrapSelection(textarea, '**'))
     return
   }
   editor.value?.chain().focus().toggleBold().run()
@@ -198,10 +324,7 @@ function toggleBold() {
 
 function toggleItalic() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      wrapSelection(textarea, '*')
-    }
+    applySourceEdit(textarea => wrapSelection(textarea, '*'))
     return
   }
   editor.value?.chain().focus().toggleItalic().run()
@@ -209,10 +332,7 @@ function toggleItalic() {
 
 function toggleStrike() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      wrapSelection(textarea, '~~')
-    }
+    applySourceEdit(textarea => wrapSelection(textarea, '~~'))
     return
   }
   editor.value?.chain().focus().toggleStrike().run()
@@ -220,10 +340,7 @@ function toggleStrike() {
 
 function setHeading(level: 1 | 2 | 3) {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleHeading(textarea, level)
-    }
+    applySourceEdit(textarea => toggleHeading(textarea, level))
     return
   }
   editor.value?.chain().focus().toggleHeading({ level }).run()
@@ -231,10 +348,7 @@ function setHeading(level: 1 | 2 | 3) {
 
 function toggleBullet() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleBulletList(textarea)
-    }
+    applySourceEdit(textarea => toggleBulletList(textarea))
     return
   }
   editor.value?.chain().focus().toggleBulletList().run()
@@ -242,10 +356,7 @@ function toggleBullet() {
 
 function toggleOrdered() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleOrderedList(textarea)
-    }
+    applySourceEdit(textarea => toggleOrderedList(textarea))
     return
   }
   editor.value?.chain().focus().toggleOrderedList().run()
@@ -253,10 +364,7 @@ function toggleOrdered() {
 
 function toggleTask() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleTaskList(textarea)
-    }
+    applySourceEdit(textarea => toggleTaskList(textarea))
     return
   }
   editor.value?.chain().focus().toggleTaskList().run()
@@ -264,10 +372,7 @@ function toggleTask() {
 
 function toggleQuote() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleBlockquote(textarea)
-    }
+    applySourceEdit(textarea => toggleBlockquote(textarea))
     return
   }
   editor.value?.chain().focus().toggleBlockquote().run()
@@ -275,10 +380,7 @@ function toggleQuote() {
 
 function toggleCode() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      toggleCodeBlock(textarea)
-    }
+    applySourceEdit(textarea => toggleCodeBlock(textarea))
     return
   }
   editor.value?.chain().focus().toggleCodeBlock().run()
@@ -290,10 +392,7 @@ function promptLink() {
     return
   }
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      insertLink(textarea, href)
-    }
+    applySourceEdit(textarea => insertLink(textarea, href))
     return
   }
   editor.value?.chain().focus().toggleLink({ href }).run()
@@ -320,10 +419,7 @@ async function insertImageAction() {
     }
     void uploadImageFile(file).then((path) => {
       if (isSourceMode.value) {
-        const textarea = sourceTextarea()
-        if (textarea) {
-          insertImage(textarea, path)
-        }
+        applySourceEdit(textarea => insertImage(textarea, path))
         return
       }
       editor.value?.chain().focus().setImage({ src: path }).run()
@@ -333,10 +429,7 @@ async function insertImageAction() {
         return
       }
       if (isSourceMode.value) {
-        const textarea = sourceTextarea()
-        if (textarea) {
-          insertImage(textarea, src)
-        }
+        applySourceEdit(textarea => insertImage(textarea, src))
         return
       }
       editor.value?.chain().focus().setImage({ src }).run()
@@ -347,10 +440,7 @@ async function insertImageAction() {
 
 function insertTableAction() {
   if (isSourceMode.value) {
-    const textarea = sourceTextarea()
-    if (textarea) {
-      insertTable(textarea)
-    }
+    applySourceEdit(textarea => insertTable(textarea))
     return
   }
   editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
@@ -377,6 +467,24 @@ onMounted(() => {
   window.addEventListener('beforeunload', saveBeforeUnload)
 })
 
+watch(sourceMarkdown, () => {
+  if (viewMode.value === 'source') {
+    syncEditorFromMarkdown()
+  }
+})
+
+watch(isSourceMode, (enabled) => {
+  if (!enabled) {
+    return
+  }
+  void nextTick(() => {
+    syncEditorFromMarkdown()
+    const proxy = ensureSourceProxy()
+    proxy.value = sourceMarkdown.value
+    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length)
+  })
+})
+
 function saveBeforeUnload() {
   void session.save(true)
 }
@@ -394,7 +502,7 @@ defineExpose({ session })
   <div class="nc-text-editor flex h-full flex-col gap-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div
-        v-if="editor && showFormattingToolbar"
+        v-if="editor && showFormattingToolbar && !toolbarDisabled"
         class="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1"
       >
         <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('bold') }" :disabled="toolbarDisabled" @click="toggleBold">
@@ -514,13 +622,14 @@ defineExpose({ session })
 
     <div
       v-if="viewMode === 'source'"
-      class="h-full"
+      class="h-full flex justify-center"
     >
-      <textarea
-        ref="sourceTextareaRef"
-        v-model="sourceMarkdown"
-        class="min-h-6vh w-full resize-y rounded-md bg-transparent font-mono text-sm leading-relaxed focus:outline-none"
-        :readonly="toolbarDisabled"
+      <div
+        ref="sourceEditorRef"
+        class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-[700px]"
+        role="textbox"
+        aria-multiline="true"
+        :contenteditable="toolbarDisabled ? 'false' : 'plaintext-only'"
         spellcheck="false"
         @input="onSourceInput"
       />
@@ -530,7 +639,7 @@ defineExpose({ session })
       v-else
       class="bg-background"
     >
-      <EditorContent :editor="editor" />
+      <EditorContent :editor="editor" class="flex justify-center" />
     </div>
   </div>
 </template>
