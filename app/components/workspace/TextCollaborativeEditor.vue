@@ -391,7 +391,7 @@ defineExpose({ session })
 </script>
 
 <template>
-  <div class="nc-text-editor flex flex-col gap-3">
+  <div class="nc-text-editor flex h-full flex-col gap-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div
         v-if="editor && showFormattingToolbar"
@@ -495,12 +495,12 @@ defineExpose({ session })
 
     <div
       v-if="viewMode === 'source'"
-      class="rounded-xl border bg-background p-2 shadow-sm"
+      class="h-full"
     >
       <textarea
         ref="sourceTextareaRef"
         v-model="sourceMarkdown"
-        class="min-h-[60vh] w-full resize-y rounded-md bg-transparent p-2 font-mono text-sm leading-relaxed focus:outline-none"
+        class="min-h-6vh w-full resize-y rounded-md bg-transparent font-mono text-sm leading-relaxed focus:outline-none"
         :readonly="toolbarDisabled"
         spellcheck="false"
         @input="onSourceInput"
@@ -509,10 +509,7 @@ defineExpose({ session })
 
     <div
       v-else
-      :class="[
-        'rounded-xl bg-background',
-        viewMode === 'reading' ? 'mx-0 max-w-3xl border-0 p-0 shadow-none' : 'border p-2 shadow-sm',
-      ]"
+      class="bg-background"
     >
       <EditorContent :editor="editor" />
     </div>

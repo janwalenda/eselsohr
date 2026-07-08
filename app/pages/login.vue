@@ -131,9 +131,9 @@ async function startLoginFlow() {
 
     awaitingReturn.value = true
     loading.value = false
+    beginPolling()
 
-    // Same-tab redirect: works on mobile and in embedded browsers (no pop-up).
-    window.location.assign(loginUrl)
+    window.open(loginUrl, '_blank', 'noopener,noreferrer')
   }
   catch (error) {
     loading.value = false
@@ -190,8 +190,8 @@ onBeforeUnmount(() => {
         Mit deiner Nextcloud verbinden
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">
-        Gib die URL deiner Nextcloud-Instanz an. Die Freigabe läuft im gleichen Browser-Tab
-        (kein Pop-up) – optimiert für Mobilgeräte.
+        Gib die URL deiner Nextcloud-Instanz an. Die Freigabe wird in einem neuen Tab geoeffnet,
+        waehrend Eselsohr hier auf die Bestaetigung wartet.
       </p>
     </div>
 
@@ -227,8 +227,8 @@ onBeforeUnmount(() => {
             Verbinde mit Nextcloud… Sobald du die Freigabe bestätigt hast, geht es automatisch weiter.
           </template>
           <template v-else>
-            Nach der Freigabe in Nextcloud: mit dem Zurück-Button hierher zurückkehren
-            oder unten „Verbindung prüfen“ tippen.
+            Falls der neue Tab nicht automatisch geoeffnet wurde, pruefe den Pop-up-Blocker
+            oder tippe unten auf „Verbindung pruefen“.
           </template>
         </p>
         <p v-if="ncUrl" class="truncate text-xs text-muted-foreground">
