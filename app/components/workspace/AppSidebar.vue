@@ -77,7 +77,7 @@ function openQuickSwitcher() {
     </SidebarHeader>
 
     <SidebarContent>
-      <SidebarGroup>
+      <SidebarGroup class="max-sm:hidden">
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>

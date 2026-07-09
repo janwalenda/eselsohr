@@ -57,7 +57,7 @@ async function reloadEditor() {
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto overflow-x-hidden">
+  <div class="h-full">
     <div class="mx-auto flex max-w-5xl flex-col gap-6 px-3 py-3">
     <PageBreadcrumb
       :collective="currentCollective"

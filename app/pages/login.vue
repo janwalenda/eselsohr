@@ -13,11 +13,18 @@ type LoginStatusResponse = {
   ncUrl?: string
 }
 
+type LoginMode = 'flow' | 'manual'
+
 const ncUrl = ref('')
+const loginName = ref('')
+const appPassword = ref('')
+const loginMode = ref<LoginMode>('flow')
 const loading = ref(false)
 const polling = ref(false)
 const awaitingReturn = ref(false)
 const errorMessage = ref('')
+const pendingLoginUrl = ref('')
+const route = useRoute()
 
 const { fetchSession } = useNcSession()
 
@@ -29,6 +36,17 @@ function clearPollTimer() {
     clearTimeout(pollTimer)
     pollTimer = null
   }
+}
+
+function shouldOfferManualFallback(error: unknown) {
+  const statusCode = typeof error === 'object' && error && 'statusCode' in error
+    ? Number((error as { statusCode?: number }).statusCode)
+    : null
+  const data = typeof error === 'object' && error && 'data' in error
+    ? (error as { data?: { fallback?: string } }).data
+    : null
+
+  return statusCode === 422 || data?.fallback === 'manual'
 }
 
 function normalizeErrorMessage(error: unknown) {
@@ -49,6 +67,13 @@ function normalizeErrorMessage(error: unknown) {
     return statusMessage
   }
   return 'Die Anmeldung konnte nicht abgeschlossen werden.'
+}
+
+function showManualFallback(error?: unknown) {
+  loginMode.value = 'manual'
+  if (error) {
+    errorMessage.value = normalizeErrorMessage(error)
+  }
 }
 
 async function pollForLoginCompletion() {
@@ -74,6 +99,15 @@ async function pollForLoginCompletion() {
     }
   }
   catch (error) {
+    if (shouldOfferManualFallback(error)) {
+      polling.value = false
+      loading.value = false
+      awaitingReturn.value = false
+      clearPollTimer()
+      showManualFallback(error)
+      return
+    }
+
     errorMessage.value = normalizeErrorMessage(error)
     polling.value = false
     loading.value = false
@@ -115,18 +149,28 @@ async function resumePendingLogin() {
   beginPolling()
 }
 
+function openNextcloudLoginTab(loginUrl: string) {
+  const popup = window.open('about:blank', '_blank')
+  if (!popup) {
+    return false
+  }
+
+  popup.opener = null
+  popup.location.replace(loginUrl)
+  return true
+}
+
 async function startLoginFlow() {
   errorMessage.value = ''
+  pendingLoginUrl.value = ''
   loading.value = true
   polling.value = false
   awaitingReturn.value = false
   pollingStopped = false
   clearPollTimer()
 
-  // Safari on iOS only allows popups opened directly
-  // from the user gesture. Open a placeholder tab first,
-  // then navigate it after the async login request resolves.
-  const popup = window.open('', '_blank', 'noopener,noreferrer')
+  // Safari only allows popups opened directly from the user gesture.
+  const popup = window.open('about:blank', '_blank')
 
   try {
     const { loginUrl } = await $fetch<{ loginUrl: string }>('/api/nc/login/start', {
@@ -136,14 +180,17 @@ async function startLoginFlow() {
 
     awaitingReturn.value = true
     loading.value = false
+    pendingLoginUrl.value = loginUrl
     beginPolling()
 
-    if (popup) {
-      popup.location.href = loginUrl
+    if (popup && !popup.closed) {
+      popup.opener = null
+      popup.location.replace(loginUrl)
+      return
     }
-    else {
-      // Fallback when popup creation is still blocked.
-      window.location.href = loginUrl
+
+    if (!openNextcloudLoginTab(loginUrl)) {
+      errorMessage.value = 'Der neue Tab konnte nicht geoeffnet werden. Bitte erlaube Pop-ups fuer Eselsohr oder oeffne Nextcloud unten manuell.'
     }
   }
   catch (error) {
@@ -151,6 +198,41 @@ async function startLoginFlow() {
     loading.value = false
     awaitingReturn.value = false
     errorMessage.value = normalizeErrorMessage(error)
+  }
+}
+
+function openPendingLoginUrl() {
+  if (!pendingLoginUrl.value) {
+    return
+  }
+
+  if (!openNextcloudLoginTab(pendingLoginUrl.value)) {
+    window.open(pendingLoginUrl.value, '_blank', 'noopener,noreferrer')
+  }
+}
+
+async function submitManualLogin() {
+  errorMessage.value = ''
+  loading.value = true
+
+  try {
+    await $fetch('/api/nc/login/manual', {
+      method: 'POST',
+      body: {
+        ncUrl: ncUrl.value,
+        loginName: loginName.value,
+        appPassword: appPassword.value,
+      },
+    })
+    appPassword.value = ''
+    await fetchSession()
+    await navigateTo('/app')
+  }
+  catch (error) {
+    errorMessage.value = normalizeErrorMessage(error)
+  }
+  finally {
+    loading.value = false
   }
 }
 
@@ -171,6 +253,13 @@ function onVisibilityChange() {
 }
 
 onMounted(async () => {
+  if (route.query.reconnect === 'nextcloud') {
+    errorMessage.value = 'Die vorherige Nextcloud-Verbindung kann keine Collectives-Seiten erstellen. Bitte verbinde Eselsohr mit einem manuell erstellten App-Passwort erneut.'
+  }
+  if (route.query.fallback === 'manual') {
+    loginMode.value = 'manual'
+  }
+
   document.addEventListener('visibilitychange', onVisibilityChange)
 
   const status = await $fetch<LoginStatusResponse>('/api/nc/login/status')
@@ -202,12 +291,86 @@ onBeforeUnmount(() => {
         Mit deiner Nextcloud verbinden
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">
-        Gib die URL deiner Nextcloud-Instanz an. Die Freigabe wird in einem neuen Tab geoeffnet,
-        waehrend Eselsohr hier auf die Bestaetigung wartet.
+        Verbinde Eselsohr mit deiner Nextcloud-Instanz. Wenn der automatische Login-Flow
+        fuer Collectives-Schreibzugriff nicht funktioniert, kannst du ein manuelles App-Passwort verwenden.
       </p>
     </div>
 
-    <Card v-if="!awaitingReturn" class="space-y-4 p-6">
+    <div class="grid grid-cols-2 gap-2 rounded-lg border border-input p-1">
+      <Button
+        variant="ghost"
+        class="w-full"
+        :class="loginMode === 'flow' ? 'bg-muted' : ''"
+        :disabled="awaitingReturn || polling"
+        @click="loginMode = 'flow'"
+      >
+        Login-Flow
+      </Button>
+      <Button
+        variant="ghost"
+        class="w-full"
+        :class="loginMode === 'manual' ? 'bg-muted' : ''"
+        :disabled="awaitingReturn || polling"
+        @click="loginMode = 'manual'"
+      >
+        App-Passwort
+      </Button>
+    </div>
+
+    <Card v-if="loginMode === 'manual' && !awaitingReturn" class="space-y-4 p-6">
+      <div class="space-y-2">
+        <label for="manual-nc-url" class="text-sm font-medium">Nextcloud-URL</label>
+        <input
+          id="manual-nc-url"
+          v-model.trim="ncUrl"
+          type="url"
+          inputmode="url"
+          autocomplete="url"
+          placeholder="https://cloud.example.com"
+          class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+          :disabled="loading"
+        >
+      </div>
+
+      <div class="space-y-2">
+        <label for="manual-login-name" class="text-sm font-medium">Benutzername</label>
+        <input
+          id="manual-login-name"
+          v-model.trim="loginName"
+          type="text"
+          autocomplete="username"
+          class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+          :disabled="loading"
+        >
+      </div>
+
+      <div class="space-y-2">
+        <label for="manual-app-password" class="text-sm font-medium">App-Passwort</label>
+        <input
+          id="manual-app-password"
+          v-model="appPassword"
+          type="password"
+          autocomplete="current-password"
+          class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+          :disabled="loading"
+        >
+        <p class="text-xs text-muted-foreground">
+          Erstelle in Nextcloud unter Einstellungen &gt; Sicherheit ein neues App-Passwort
+          und fuege es hier ein.
+        </p>
+      </div>
+
+      <Button
+        class="w-full"
+        :disabled="loading || !ncUrl || !loginName || !appPassword"
+        @click="submitManualLogin"
+      >
+        <span v-if="loading">Verbindung wird geprueft…</span>
+        <span v-else>Mit App-Passwort verbinden</span>
+      </Button>
+    </Card>
+
+    <Card v-else-if="!awaitingReturn" class="space-y-4 p-6">
       <div class="space-y-2">
         <label for="nc-url" class="text-sm font-medium">Nextcloud-URL</label>
         <input
@@ -236,17 +399,28 @@ onBeforeUnmount(() => {
         </h2>
         <p class="text-sm text-muted-foreground">
           <template v-if="polling">
-            Verbinde mit Nextcloud… Sobald du die Freigabe bestätigt hast, geht es automatisch weiter.
+            Eselsohr bleibt in diesem Tab geoeffnet. Bestaetige die Freigabe im Nextcloud-Tab,
+            dann geht es hier automatisch weiter.
           </template>
           <template v-else>
-            Falls der neue Tab nicht automatisch geoeffnet wurde, pruefe den Pop-up-Blocker
-            oder tippe unten auf „Verbindung pruefen“.
+            Falls der Nextcloud-Tab nicht automatisch geoeffnet wurde, pruefe den Pop-up-Blocker
+            oder oeffne Nextcloud unten manuell.
           </template>
         </p>
         <p v-if="ncUrl" class="truncate text-xs text-muted-foreground">
           {{ ncUrl }}
         </p>
       </div>
+
+      <Button
+        v-if="pendingLoginUrl"
+        class="w-full"
+        variant="outline"
+        :disabled="polling"
+        @click="openPendingLoginUrl"
+      >
+        Nextcloud in neuem Tab oeffnen
+      </Button>
 
       <Button
         class="w-full"
@@ -273,11 +447,17 @@ onBeforeUnmount(() => {
       class="border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
     >
       {{ errorMessage }}
+      <div v-if="loginMode === 'flow'" class="mt-3">
+        <Button variant="outline" size="sm" @click="showManualFallback()">
+          Stattdessen App-Passwort verwenden
+        </Button>
+      </div>
     </Card>
 
     <Card class="p-4 text-sm text-muted-foreground">
       Unterstützt werden beliebige Nextcloud-Instanzen ohne vorherige OAuth-Konfiguration in
       Eselsohr. Beim Abmelden wird das erzeugte App-Passwort wieder in Nextcloud widerrufen.
+      Wenn der Login-Flow keine Collectives-Seiten erstellen kann, nutze den Tab „App-Passwort“.
     </Card>
   </div>
 </template>

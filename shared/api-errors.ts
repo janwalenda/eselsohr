@@ -1,6 +1,64 @@
+export const COLLECTIVES_WRITE_AUTH_ERROR_CODE = 'COLLECTIVES_WRITE_AUTH_FAILED'
+
 type OcsMeta = {
   statuscode?: number
   message?: string
+}
+
+export function readOcsStatusCode(data: unknown, depth = 0): number | null {
+  if (!data || depth > 4) {
+    return null
+  }
+
+  if (typeof data === 'string') {
+    try {
+      return readOcsStatusCode(JSON.parse(data), depth + 1)
+    }
+    catch {
+      return null
+    }
+  }
+
+  if (typeof data !== 'object' || Array.isArray(data)) {
+    return null
+  }
+
+  const record = data as {
+    code?: string
+    ocs?: { meta?: OcsMeta }
+    data?: unknown
+  }
+
+  if (record.code === COLLECTIVES_WRITE_AUTH_ERROR_CODE) {
+    return 996
+  }
+
+  const statusCode = record.ocs?.meta?.statuscode
+  if (typeof statusCode === 'number') {
+    return statusCode
+  }
+
+  if (record.data) {
+    return readOcsStatusCode(record.data, depth + 1)
+  }
+
+  return null
+}
+
+export function isCollectivesWriteAuthError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const statusCode = 'statusCode' in error
+    ? Number((error as { statusCode?: number }).statusCode)
+    : null
+  if (statusCode !== 500) {
+    return false
+  }
+
+  const data = 'data' in error ? (error as { data?: unknown }).data : null
+  return readOcsStatusCode(data) === 996
 }
 
 function readOcsMessage(data: unknown): string | null {

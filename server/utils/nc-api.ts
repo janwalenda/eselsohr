@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { COLLECTIVES_WRITE_AUTH_ERROR_CODE, readOcsStatusCode } from '../../shared/api-errors'
 import { getActiveSession } from './nc-session'
 
 export type NcCredentials = {
@@ -117,6 +118,21 @@ function readOcsErrorMessage(body: JsonValue | string | null): string | null {
   return message?.trim() || null
 }
 
+function enrichNcErrorData(body: JsonValue | string | null) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return body
+  }
+
+  if (readOcsStatusCode(body) !== 996) {
+    return body
+  }
+
+  return {
+    ...body,
+    code: COLLECTIVES_WRITE_AUTH_ERROR_CODE,
+  }
+}
+
 async function withNcError(response: Response) {
   const body = await parseResponseBody(response)
   const ocsMessage = readOcsErrorMessage(body)
@@ -125,15 +141,30 @@ async function withNcError(response: Response) {
     ?? response.statusText
     ?? 'Nextcloud request failed'
 
-  // #region agent log
-  fetch('http://127.0.0.1:7441/ingest/295730c0-36a3-4a8b-b23d-14de7325db37',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ac45ab'},body:JSON.stringify({sessionId:'ac45ab',runId:'native-parity',hypothesisId:'M1,M2,M3',location:'nc-api.ts:withNcError',message:'nc request failed',data:{url:response.url,status:response.status,statusMessage,bodyPreview:typeof body==='string'?body.slice(0,300):JSON.stringify(body).slice(0,300)},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   throw createError({
     statusCode: response.status,
     statusMessage,
-    data: body,
+    data: enrichNcErrorData(body),
   })
+}
+
+function mergeRequestHeaders(
+  credentials: NcCredentials,
+  initHeaders?: HeadersInit,
+): Headers {
+  const headers = new Headers({
+    Authorization: getBasicAuthHeader(credentials),
+    'OCS-APIRequest': 'true',
+    Accept: 'application/json',
+  })
+
+  if (initHeaders) {
+    new Headers(initHeaders).forEach((value, key) => {
+      headers.set(key, value)
+    })
+  }
+
+  return headers
 }
 
 export async function ncFetchWithCredentials(
@@ -146,12 +177,7 @@ export async function ncFetchWithCredentials(
   try {
     response = await fetch(targetUrl, {
       ...init,
-      headers: {
-        Authorization: getBasicAuthHeader(credentials),
-        'OCS-APIRequest': 'true',
-        Accept: 'application/json',
-        ...init.headers,
-      },
+      headers: mergeRequestHeaders(credentials, init.headers),
     })
   }
   catch (error) {

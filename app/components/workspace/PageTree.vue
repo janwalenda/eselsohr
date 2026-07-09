@@ -113,9 +113,10 @@ async function handleCreate(title: string) {
   }
 
   try {
+    const parentId = resolveCreateParentId(createTarget.value)
     const page = await createPage({
       title,
-      parentId: resolveCreateParentId(createTarget.value),
+      parentId,
     })
     toast.success('Unterseite erstellt')
     await navigateTo(`/app/${props.collectiveId}/${page.id}`)
