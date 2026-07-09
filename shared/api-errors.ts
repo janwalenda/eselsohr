@@ -53,12 +53,14 @@ export function isCollectivesWriteAuthError(error: unknown): boolean {
   const statusCode = 'statusCode' in error
     ? Number((error as { statusCode?: number }).statusCode)
     : null
-  if (statusCode !== 500) {
+  const data = 'data' in error ? (error as { data?: unknown }).data : null
+  const ocsStatusCode = readOcsStatusCode(data)
+
+  if (ocsStatusCode !== 996) {
     return false
   }
 
-  const data = 'data' in error ? (error as { data?: unknown }).data : null
-  return readOcsStatusCode(data) === 996
+  return statusCode === 500 || statusCode === 422
 }
 
 function readOcsMessage(data: unknown): string | null {

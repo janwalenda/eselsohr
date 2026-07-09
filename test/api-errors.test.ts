@@ -56,6 +56,18 @@ describe('isCollectivesWriteAuthError', () => {
     })).toBe(true)
   })
 
+  it('detects validation failures with status 422 and the auth error code', () => {
+    expect(isCollectivesWriteAuthError({
+      statusCode: 422,
+      statusMessage: 'Diese Zugangsdaten können in Collectives keine Seiten erstellen.',
+      data: {
+        code: COLLECTIVES_WRITE_AUTH_ERROR_CODE,
+        reason: 'write_probe_failed',
+        fallback: 'manual',
+      },
+    })).toBe(true)
+  })
+
   it('ignores unrelated 500 errors', () => {
     expect(isCollectivesWriteAuthError({
       statusCode: 500,
