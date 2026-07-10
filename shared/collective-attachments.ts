@@ -30,6 +30,10 @@ export function buildAttachmentProxyBase(collectiveId: number, pageId: number) {
   return `/api/collectives/${collectiveId}/pages/${pageId}/attachments`;
 }
 
+export function buildPublicAttachmentProxyBase(token: string, pageId: number) {
+  return `/api/public/s/${encodeURIComponent(token)}/pages/${pageId}/attachments`;
+}
+
 const ATTACHMENT_PATH_IN_MARKDOWN_RE = /(\.?attachments\.\d+\/[^\s)\]"'<>]+)/g;
 
 export function rewriteCollectiveAttachmentsForDisplay(markdown: string, proxyBase: string) {

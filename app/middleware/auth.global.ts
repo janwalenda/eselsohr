@@ -5,6 +5,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await fetchSession();
   }
 
+  if (to.path.startsWith("/s/")) {
+    return;
+  }
+
   if (to.path.startsWith("/app") && !session.value) {
     return navigateTo("/login");
   }
