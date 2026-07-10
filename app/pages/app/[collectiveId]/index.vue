@@ -10,7 +10,7 @@ definePageMeta({
 const route = useRoute()
 const collectiveId = computed(() => Number(route.params.collectiveId))
 const { collectives } = useCollectives()
-const { pages, pending, error, createPage } = useCollectivePages(collectiveId)
+const { pages, pending, error, createPage, landingPage } = useCollectivePages(collectiveId)
 
 const currentCollective = computed(() =>
   collectives.value.find(collective => collective.id === collectiveId.value) ?? null,
@@ -24,7 +24,11 @@ function toMessage(input: unknown) {
 
 async function handleCreate(title: string) {
   try {
-    const page = await createPage({ title, parentId: 0 })
+    const rootParentId = landingPage.value?.id
+    if (!rootParentId) {
+      throw new Error('Die Landing-Page des Collectives konnte nicht gefunden werden.')
+    }
+    const page = await createPage({ title, parentId: rootParentId })
     toast.success('Seite erstellt')
     await navigateTo(`/app/${collectiveId.value}/${page.id}`)
   }

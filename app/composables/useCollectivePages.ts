@@ -6,6 +6,7 @@ import type {
 } from '~~/shared/collectives'
 import type { MaybeRefOrGetter } from 'vue'
 import { computed, toValue } from 'vue'
+import { isCollectivesWriteAuthError } from '~~/shared/api-errors'
 import { isLandingPage } from '~~/shared/collectives'
 
 export function flattenPageTree(nodes: CollectivePageNode[]): CollectivePage[] {
@@ -60,6 +61,7 @@ export function sidebarPageTree(nodes: CollectivePageNode[]): CollectivePageNode
 
 export function useCollectivePages(collectiveIdSource: MaybeRefOrGetter<number | string>) {
   const apiFetch = useApiFetch()
+  const { signOut } = useNcSession()
   const collectiveId = computed(() => Number(toValue(collectiveIdSource)))
   const key = computed(() => `collective-pages:${collectiveId.value}`)
 
@@ -86,15 +88,28 @@ export function useCollectivePages(collectiveIdSource: MaybeRefOrGetter<number |
   }
 
   async function createPage(input: CreatePageInput) {
-    const response = await apiFetch<{ page: CollectivePage }>(
-      `/api/collectives/${collectiveId.value}/pages`,
-      {
-        method: 'POST',
-        body: input,
-      },
-    )
-    await refreshPages()
-    return response.page
+    try {
+      const response = await apiFetch<{ page: CollectivePage }>(
+        `/api/collectives/${collectiveId.value}/pages`,
+        {
+          method: 'POST',
+          body: input,
+        },
+      )
+      await refreshPages()
+      return response.page
+    }
+    catch (error) {
+      if (isCollectivesWriteAuthError(error)) {
+        await signOut()
+        await navigateTo('/login?reconnect=nextcloud&fallback=manual')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Diese Nextcloud-Verbindung kann keine Collectives-Seiten erstellen. Bitte verbinde Eselsohr mit einem manuellen App-Passwort erneut.',
+        })
+      }
+      throw error
+    }
   }
 
   async function updatePage(pageId: number, input: UpdatePageInput) {

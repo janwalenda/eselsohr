@@ -1,4 +1,6 @@
+import { COLLECTIVES_WRITE_AUTH_ERROR_CODE } from '../../../../shared/api-errors'
 import { hasCollectivesCapability, normalizeNcUrl, revokeAppPassword } from '../../../utils/nc-api'
+import { validateCollectivesWriteAccess } from '../../../utils/nc-auth-validation'
 import { clearNcSession, getPendingSession, promoteToActive } from '../../../utils/nc-session'
 
 type LoginFlowPollResponse = {
@@ -72,6 +74,21 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 412,
       statusMessage: 'The Nextcloud Collectives app is not installed on this server',
+    })
+  }
+
+  const validation = await validateCollectivesWriteAccess(credentials)
+  if (!validation.ok) {
+    await revokeAppPassword(credentials)
+    await clearNcSession(event)
+    throw createError({
+      statusCode: 422,
+      statusMessage: validation.message,
+      data: {
+        code: COLLECTIVES_WRITE_AUTH_ERROR_CODE,
+        reason: validation.reason,
+        fallback: 'manual',
+      },
     })
   }
 

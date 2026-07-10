@@ -53,5 +53,5 @@ export function isLandingPage(page: Pick<CollectivePage, 'fileName' | 'filePath'
 export function resolveCreateParentId(
   page: Pick<CollectivePage, 'id' | 'fileName' | 'filePath' | 'parentId'>,
 ): number {
-  return isLandingPage(page) ? 0 : page.id
+  return page.id
 }

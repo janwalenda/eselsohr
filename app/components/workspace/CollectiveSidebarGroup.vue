@@ -20,12 +20,11 @@ const props = defineProps<{
   isActive: boolean
 }>()
 
-const apiFetch = useApiFetch()
 const createOpen = ref(false)
 const openingCollective = ref(false)
 const pagesExpanded = ref(true)
 
-const { landingPage } = useCollectivePages(() =>
+const { landingPage, createPage } = useCollectivePages(() =>
   props.isActive ? props.collective.id : Number.NaN,
 )
 
@@ -76,15 +75,13 @@ function toMessage(error: unknown) {
 
 async function handleCreate(title: string) {
   try {
-    const response = await apiFetch<{ page: { id: number } }>(
-      `/api/collectives/${props.collective.id}/pages`,
-      {
-        method: 'POST',
-        body: { title, parentId: 0 },
-      },
-    )
+    const rootParentId = landingPageId.value
+    if (!rootParentId) {
+      throw new Error('Die Landing-Page des Collectives konnte nicht gefunden werden.')
+    }
+    const page = await createPage({ title, parentId: rootParentId })
     toast.success('Seite erstellt')
-    await navigateTo(`/app/${props.collective.id}/${response.page.id}`)
+    await navigateTo(`/app/${props.collective.id}/${page.id}`)
   }
   catch (createError) {
     toast.error(toMessage(createError))

@@ -63,7 +63,7 @@ function openQuickSwitcher() {
     <SidebarHeader>
       <div class="flex items-center gap-2 px-2 py-1.5">
         <div class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-md text-sm font-semibold">
-          {{ session?.loginName.charAt(0) }}
+          {{ session?.loginName?.charAt(0) ?? 'E' }}
         </div>
         <div class="min-w-0">
           <div class="truncate text-sm font-medium">
@@ -77,7 +77,7 @@ function openQuickSwitcher() {
     </SidebarHeader>
 
     <SidebarContent>
-      <SidebarGroup>
+      <SidebarGroup class="max-sm:hidden">
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>

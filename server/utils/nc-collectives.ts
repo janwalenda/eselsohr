@@ -6,7 +6,6 @@ import type {
   CreatePageInput,
   UpdatePageInput,
 } from '../../shared/collectives'
-import { isLandingPage } from '../../shared/collectives'
 import { ncFetchJson } from './nc-api'
 
 type OcsResponse<T> = {
@@ -33,7 +32,7 @@ type NcPagesResponse = {
 }
 
 function collectivesPath(path = '') {
-  return `/ocs/v2.php/apps/collectives/api/v1.0${path}?format=json`
+  return `/ocs/v2.php/apps/collectives/api/v1.0${path}`
 }
 
 async function collectivesRequest<T>(
@@ -41,14 +40,17 @@ async function collectivesRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const headers = new Headers(init.headers)
-  if (init.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
+  const headers: Record<string, string> = {}
+  if (init.body && !(init.headers && new Headers(init.headers).has('Content-Type'))) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const response = await ncFetchJson<OcsResponse<T>>(event, collectivesPath(path), {
     ...init,
-    headers,
+    headers: {
+      ...headers,
+      ...(init.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {}),
+    },
   })
 
   return (response.ocs?.data ?? {}) as T
@@ -145,23 +147,13 @@ export async function getPage(event: H3Event, collectiveId: number, pageId: numb
 }
 
 export async function createPage(event: H3Event, collectiveId: number, input: CreatePageInput) {
-  let parentId = input.parentId ?? 0
-  if (parentId !== 0) {
-    const parent = await getPage(event, collectiveId, parentId)
-    if (isLandingPage(parent)) {
-      parentId = 0
-    }
-  }
-
+  const parentId = input.parentId ?? 0
+  const title = input.title.trim()
   const requestBody = {
-    title: input.title,
+    title,
     parentId,
     templateId: null,
   }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7441/ingest/295730c0-36a3-4a8b-b23d-14de7325db37',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ac45ab'},body:JSON.stringify({sessionId:'ac45ab',runId:'native-parity',hypothesisId:'M1,M2',location:'nc-collectives.ts:createPage',message:'nc create request',data:{collectiveId,parentId,requestBody},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   const data = await collectivesRequest<NcPageResponse>(
     event,
@@ -171,10 +163,6 @@ export async function createPage(event: H3Event, collectiveId: number, input: Cr
       body: JSON.stringify(requestBody),
     },
   )
-
-  // #region agent log
-  fetch('http://127.0.0.1:7441/ingest/295730c0-36a3-4a8b-b23d-14de7325db37',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ac45ab'},body:JSON.stringify({sessionId:'ac45ab',runId:'native-parity',hypothesisId:'M1,M2',location:'nc-collectives.ts:createPage',message:'nc create ok',data:{pageId:data.page?.id,title:data.page?.title},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   if (!data.page) {
     throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the created page' })
