@@ -29,13 +29,13 @@ async function handleSignOut() {
             <template #fallback>
               <span class="opacity-50">…</span>
             </template>
-            <div v-if="loggedIn" class="flex items-center gap-2">
+            <!-- <div v-if="loggedIn" class="flex items-center gap-2">
               <span class="max-w-56 truncate text-foreground">
                 {{ session?.loginName }}@{{ nextcloudHost }}
               </span>
               <Button variant="outline" size="sm" @click="handleSignOut"> Abmelden </Button>
-            </div>
-            <NuxtLink v-else to="/login">
+            </div> -->
+            <NuxtLink v-if="!loggedIn" to="/login">
               <Button size="sm"> Anmelden </Button>
             </NuxtLink>
           </ClientOnly>

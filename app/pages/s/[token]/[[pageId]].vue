@@ -44,7 +44,7 @@ const routeErrorMessage = computed(
 
 <template>
   <div class="min-h-screen bg-background">
-    <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row">
+    <div class="mx-auto flex max-w-7xl flex-col gap-6 md:px-4 py-6 lg:flex-row">
       <main class="min-w-0 flex-1">
         <div class="space-y-4">
           <Breadcrumb v-if="currentPage">
