@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { EditorContent, useEditor } from '@tiptap/vue-3'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { EditorContent, useEditor } from "@tiptap/vue-3";
 import {
   BoldIcon,
   Code2Icon,
@@ -18,10 +18,12 @@ import {
   StrikethroughIcon,
   TableIcon,
   UndoIcon,
-} from 'lucide-vue-next'
-import EditorViewModeToggle, { type ViewMode } from '@/components/workspace/EditorViewModeToggle.vue'
-import { buildExtensions } from '@/lib/nc-text/editor/extensions'
-import { APPLY_MARKDOWN_ORIGIN, applyMarkdownToYdoc } from '@/lib/nc-text/editor/apply-markdown'
+} from "lucide-vue-next";
+import EditorViewModeToggle, {
+  type ViewMode,
+} from "@/components/workspace/EditorViewModeToggle.vue";
+import { buildExtensions } from "@/lib/nc-text/editor/extensions";
+import { APPLY_MARKDOWN_ORIGIN, applyMarkdownToYdoc } from "@/lib/nc-text/editor/apply-markdown";
 import {
   insertImage,
   insertLink,
@@ -33,42 +35,48 @@ import {
   toggleOrderedList,
   toggleTaskList,
   wrapSelection,
-} from '@/lib/nc-text/editor/markdown-insert'
-import { serializeMarkdown } from '@/lib/nc-text/editor/markdown-serializer'
-import { seedInitialContent } from '@/lib/nc-text/editor/seed'
-import { shouldApplySourceMarkdownOnModeSwitch } from '@/lib/nc-text/editor/source-mode'
-import { useTextSession } from '@/composables/useTextSession'
+} from "@/lib/nc-text/editor/markdown-insert";
+import { serializeMarkdown } from "@/lib/nc-text/editor/markdown-serializer";
+import { seedInitialContent } from "@/lib/nc-text/editor/seed";
+import { shouldApplySourceMarkdownOnModeSwitch } from "@/lib/nc-text/editor/source-mode";
+import { useTextSession } from "@/composables/useTextSession";
 
 const props = defineProps<{
-  collectiveId: number
-  pageId: number
-  userName: string
-}>()
+  collectiveId: number;
+  pageId: number;
+  userName: string;
+}>();
 
 const emit = defineEmits<{
-  'reload': []
-}>()
+  reload: [];
+}>();
 
 function colorForName(name: string) {
-  let hash = 0
+  let hash = 0;
+
   for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return `hsl(${Math.abs(hash) % 360}, 70%, 45%)`
+
+  return `hsl(${Math.abs(hash) % 360}, 70%, 45%)`;
 }
 
 const session = useTextSession(props.collectiveId, props.pageId, {
   name: props.userName,
   color: colorForName(props.userName),
-})
+});
 
-const apiFetch = useApiFetch()
+const apiFetch = useApiFetch();
 
-const viewMode = ref<ViewMode>('editing')
-const sourceMarkdown = ref('')
-const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
-const sourceEditorRef = ref<HTMLDivElement | null>(null)
-const sourceRemoteStale = ref(false)
+const viewMode = ref<ViewMode>("editing");
+
+const sourceMarkdown = ref("");
+
+const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null);
+
+const sourceEditorRef = ref<HTMLDivElement | null>(null);
+
+const sourceRemoteStale = ref(false);
 
 const editor = useEditor({
   extensions: buildExtensions({
@@ -79,423 +87,508 @@ const editor = useEditor({
   }),
   editorProps: {
     attributes: {
-      class: 'prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-[700px] px-0 py-2 focus:outline-none w-full',
+      class:
+        "prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-[700px] px-0 py-2 focus:outline-none w-full",
     },
     handleClick(_view, _pos, event) {
       if (event.button !== 0) {
-        return false
+        return false;
       }
 
-      const target = event.target
+      const target = event.target;
+
       if (!(target instanceof Element)) {
-        return false
+        return false;
       }
 
-      const link = target.closest('a[href]')
+      const link = target.closest("a[href]");
+
       if (!(link instanceof HTMLAnchorElement) || !link.href) {
-        return false
+        return false;
       }
 
-      const openForReading = viewMode.value === 'reading' || session.readOnly.value
-      const openWithModifier = event.metaKey || event.ctrlKey
+      const openForReading = viewMode.value === "reading" || session.readOnly.value;
+
+      const openWithModifier = event.metaKey || event.ctrlKey;
 
       if (openForReading || openWithModifier) {
-        window.open(link.href, link.target || '_blank', 'noopener,noreferrer')
-        return true
+        window.open(link.href, link.target || "_blank", "noopener,noreferrer");
+        return true;
       }
 
-      return false
+      return false;
     },
   },
-})
+});
 
-const isContentEditable = computed(() =>
-  !session.readOnly.value && viewMode.value !== 'reading',
-)
+const isContentEditable = computed(() => !session.readOnly.value && viewMode.value !== "reading");
 
-watch(isContentEditable, (editable) => {
-  editor.value?.setEditable(editable)
-}, { immediate: true })
+watch(
+  isContentEditable,
+  (editable) => {
+    editor.value?.setEditable(editable);
+  },
+  { immediate: true },
+);
 
 const lastCollaborator = computed(() => {
-  const latestSession = session.collaborators.value.reduce((latest, current) => {
-    return !latest || current.lastContact > latest.lastContact ? current : latest
-  }, null as (typeof session.collaborators.value)[number] | null)
+  const latestSession = session.collaborators.value.reduce(
+    (latest, current) => {
+      return !latest || current.lastContact > latest.lastContact ? current : latest;
+    },
+    null as (typeof session.collaborators.value)[number] | null,
+  );
 
-  return latestSession?.displayName || latestSession?.guestName || latestSession?.userId || ''
-})
+  return latestSession?.displayName || latestSession?.guestName || latestSession?.userId || "";
+});
 
 const statusLabel = computed(() => {
-  if (session.status.value === 'error') {
-    return session.expired.value ? 'Sitzung abgelaufen' : 'Verbindungsfehler'
+  if (session.status.value === "error") {
+    return session.expired.value ? "Sitzung abgelaufen" : "Verbindungsfehler";
   }
-  if (session.connectionIssue.value) {
-    return 'Verbindung unterbrochen …'
-  }
-  if (session.saving.value) {
-    return 'Speichert …'
-  }
-  if (session.status.value === 'readonly') {
-    return 'Schreibgeschützt'
-  }
-  if (session.status.value === 'connecting') {
-    return 'Verbindet …'
-  }
-  if (session.dirty.value) {
-    return 'Ungespeichert'
-  }
-  return 'Synchronisiert'
-})
 
-const toolbarDisabled = computed(() => session.readOnly.value)
-const isSourceMode = computed(() => viewMode.value === 'source')
-const showFormattingToolbar = computed(() => viewMode.value !== 'reading')
+  if (session.connectionIssue.value) {
+    return "Verbindung unterbrochen …";
+  }
+
+  if (session.saving.value) {
+    return "Speichert …";
+  }
+
+  if (session.status.value === "readonly") {
+    return "Schreibgeschützt";
+  }
+
+  if (session.status.value === "connecting") {
+    return "Verbindet …";
+  }
+
+  if (session.dirty.value) {
+    return "Ungespeichert";
+  }
+
+  return "Synchronisiert";
+});
+
+const toolbarDisabled = computed(() => session.readOnly.value);
+
+const isSourceMode = computed(() => viewMode.value === "source");
+
+const showFormattingToolbar = computed(() => viewMode.value !== "reading");
 
 function sourceTextarea() {
-  return sourceTextareaRef.value
+  return sourceTextareaRef.value;
 }
 
 function sourceEditor() {
-  return sourceEditorRef.value
+  return sourceEditorRef.value;
 }
 
 function ensureSourceProxy() {
-  let proxy = sourceTextarea()
+  let proxy = sourceTextarea();
+
   if (proxy) {
-    return proxy
+    return proxy;
   }
-  proxy = window.document.createElement('textarea')
-  proxy.spellcheck = false
-  sourceTextareaRef.value = proxy
-  return proxy
+
+  proxy = window.document.createElement("textarea");
+  proxy.spellcheck = false;
+  sourceTextareaRef.value = proxy;
+  return proxy;
 }
 
 function readEditorSelectionOffsets(editorEl: HTMLDivElement) {
-  const selection = window.getSelection()
+  const selection = window.getSelection();
+
   if (!selection || selection.rangeCount === 0) {
-    return { start: 0, end: 0 }
+    return { start: 0, end: 0 };
   }
-  const range = selection.getRangeAt(0)
+
+  const range = selection.getRangeAt(0);
+
   if (!editorEl.contains(range.startContainer) || !editorEl.contains(range.endContainer)) {
-    const length = editorEl.textContent?.length ?? 0
-    return { start: length, end: length }
+    const length = editorEl.textContent?.length ?? 0;
+
+    return { start: length, end: length };
   }
 
-  const preStartRange = range.cloneRange()
-  preStartRange.selectNodeContents(editorEl)
-  preStartRange.setEnd(range.startContainer, range.startOffset)
-  const start = preStartRange.toString().length
+  const preStartRange = range.cloneRange();
 
-  const preEndRange = range.cloneRange()
-  preEndRange.selectNodeContents(editorEl)
-  preEndRange.setEnd(range.endContainer, range.endOffset)
-  const end = preEndRange.toString().length
+  preStartRange.selectNodeContents(editorEl);
+  preStartRange.setEnd(range.startContainer, range.startOffset);
+  const start = preStartRange.toString().length;
 
-  return { start, end }
+  const preEndRange = range.cloneRange();
+
+  preEndRange.selectNodeContents(editorEl);
+  preEndRange.setEnd(range.endContainer, range.endOffset);
+  const end = preEndRange.toString().length;
+
+  return { start, end };
 }
 
 function setEditorSelectionOffsets(editorEl: HTMLDivElement, start: number, end: number) {
-  const selection = window.getSelection()
+  const selection = window.getSelection();
+
   if (!selection) {
-    return
+    return;
   }
 
   if (!editorEl.firstChild) {
-    editorEl.appendChild(window.document.createTextNode(''))
+    editorEl.appendChild(window.document.createTextNode(""));
   }
 
-  const range = window.document.createRange()
-  const walker = window.document.createTreeWalker(editorEl, NodeFilter.SHOW_TEXT)
-  let currentNode = walker.nextNode()
-  let position = 0
-  let startNode: Node | null = null
-  let startOffset = 0
-  let endNode: Node | null = null
-  let endOffset = 0
+  const range = window.document.createRange();
+
+  const walker = window.document.createTreeWalker(editorEl, NodeFilter.SHOW_TEXT);
+
+  let currentNode = walker.nextNode();
+
+  let position = 0;
+
+  let startNode: Node | null = null;
+
+  let startOffset = 0;
+
+  let endNode: Node | null = null;
+
+  let endOffset = 0;
 
   while (currentNode) {
-    const textLength = currentNode.textContent?.length ?? 0
-    const nextPosition = position + textLength
+    const textLength = currentNode.textContent?.length ?? 0;
+
+    const nextPosition = position + textLength;
+
     if (!startNode && start <= nextPosition) {
-      startNode = currentNode
-      startOffset = Math.max(0, start - position)
+      startNode = currentNode;
+      startOffset = Math.max(0, start - position);
     }
+
     if (!endNode && end <= nextPosition) {
-      endNode = currentNode
-      endOffset = Math.max(0, end - position)
+      endNode = currentNode;
+      endOffset = Math.max(0, end - position);
     }
+
     if (startNode && endNode) {
-      break
+      break;
     }
-    position = nextPosition
-    currentNode = walker.nextNode()
+
+    position = nextPosition;
+    currentNode = walker.nextNode();
   }
 
-  const fallbackNode = editorEl.lastChild ?? editorEl
-  range.setStart(startNode ?? fallbackNode, startNode ? startOffset : fallbackNode.textContent?.length ?? 0)
-  range.setEnd(endNode ?? fallbackNode, endNode ? endOffset : fallbackNode.textContent?.length ?? 0)
+  const fallbackNode = editorEl.lastChild ?? editorEl;
 
-  selection.removeAllRanges()
-  selection.addRange(range)
+  range.setStart(
+    startNode ?? fallbackNode,
+    startNode ? startOffset : (fallbackNode.textContent?.length ?? 0),
+  );
+  range.setEnd(
+    endNode ?? fallbackNode,
+    endNode ? endOffset : (fallbackNode.textContent?.length ?? 0),
+  );
+
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function syncProxyFromEditor() {
-  const editorEl = sourceEditor()
-  const proxy = ensureSourceProxy()
+  const editorEl = sourceEditor();
+
+  const proxy = ensureSourceProxy();
+
   if (!editorEl) {
-    proxy.value = sourceMarkdown.value
-    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length)
-    return proxy
+    proxy.value = sourceMarkdown.value;
+    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length);
+    return proxy;
   }
 
-  const text = editorEl.textContent ?? ''
-  const { start, end } = readEditorSelectionOffsets(editorEl)
-  proxy.value = text
-  proxy.setSelectionRange(start, end)
-  return proxy
+  const text = editorEl.textContent ?? "";
+
+  const { start, end } = readEditorSelectionOffsets(editorEl);
+
+  proxy.value = text;
+  proxy.setSelectionRange(start, end);
+  return proxy;
 }
 
-function syncEditorFromMarkdown(selection?: { start: number, end: number }) {
-  const editorEl = sourceEditor()
+function syncEditorFromMarkdown(selection?: { start: number; end: number }) {
+  const editorEl = sourceEditor();
+
   if (!editorEl) {
-    return
+    return;
   }
-  const nextText = sourceMarkdown.value
-  if ((editorEl.textContent ?? '') !== nextText) {
-    editorEl.textContent = nextText
+
+  const nextText = sourceMarkdown.value;
+
+  if ((editorEl.textContent ?? "") !== nextText) {
+    editorEl.textContent = nextText;
   }
+
   if (selection) {
-    editorEl.focus()
-    setEditorSelectionOffsets(editorEl, selection.start, selection.end)
+    editorEl.focus();
+    setEditorSelectionOffsets(editorEl, selection.start, selection.end);
   }
 }
 
 function applySourceEdit(mutator: (textarea: HTMLTextAreaElement) => void) {
-  const proxy = syncProxyFromEditor()
-  mutator(proxy)
-  sourceMarkdown.value = proxy.value
+  const proxy = syncProxyFromEditor();
+
+  mutator(proxy);
+  sourceMarkdown.value = proxy.value;
   syncEditorFromMarkdown({
     start: proxy.selectionStart,
     end: proxy.selectionEnd,
-  })
-  markDirty()
+  });
+  markDirty();
 }
 
 function markDirty() {
-  session.dirty.value = true
+  session.dirty.value = true;
 }
 
 function onSourceInput() {
-  const editorEl = sourceEditor()
-  sourceMarkdown.value = editorEl?.textContent ?? ''
-  markDirty()
+  const editorEl = sourceEditor();
+
+  sourceMarkdown.value = editorEl?.textContent ?? "";
+  markDirty();
 }
 
 function switchViewMode(next: ViewMode) {
   if (next === viewMode.value) {
-    return
+    return;
   }
 
-  const previous = viewMode.value
+  const previous = viewMode.value;
 
-  if (previous === 'source' && next !== 'source') {
+  if (previous === "source" && next !== "source") {
     if (shouldApplySourceMarkdownOnModeSwitch(sourceRemoteStale.value)) {
-      applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value)
+      applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value);
     }
-    sourceRemoteStale.value = false
-  }
-  else if (previous !== 'source' && next === 'source') {
+
+    sourceRemoteStale.value = false;
+  } else if (previous !== "source" && next === "source") {
     if (editor.value) {
-      sourceMarkdown.value = serializeMarkdown(editor.value.state.doc)
+      sourceMarkdown.value = serializeMarkdown(editor.value.state.doc);
     }
-    sourceRemoteStale.value = false
+
+    sourceRemoteStale.value = false;
   }
 
-  viewMode.value = next
+  viewMode.value = next;
 }
 
 function toggleBold() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => wrapSelection(textarea, '**'))
-    return
+    applySourceEdit((textarea) => wrapSelection(textarea, "**"));
+    return;
   }
-  editor.value?.chain().focus().toggleBold().run()
+
+  editor.value?.chain().focus().toggleBold().run();
 }
 
 function toggleItalic() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => wrapSelection(textarea, '*'))
-    return
+    applySourceEdit((textarea) => wrapSelection(textarea, "*"));
+    return;
   }
-  editor.value?.chain().focus().toggleItalic().run()
+
+  editor.value?.chain().focus().toggleItalic().run();
 }
 
 function toggleStrike() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => wrapSelection(textarea, '~~'))
-    return
+    applySourceEdit((textarea) => wrapSelection(textarea, "~~"));
+    return;
   }
-  editor.value?.chain().focus().toggleStrike().run()
+
+  editor.value?.chain().focus().toggleStrike().run();
 }
 
 function setHeading(level: 1 | 2 | 3) {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleHeading(textarea, level))
-    return
+    applySourceEdit((textarea) => toggleHeading(textarea, level));
+    return;
   }
-  editor.value?.chain().focus().toggleHeading({ level }).run()
+
+  editor.value?.chain().focus().toggleHeading({ level }).run();
 }
 
 function toggleBullet() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleBulletList(textarea))
-    return
+    applySourceEdit((textarea) => toggleBulletList(textarea));
+    return;
   }
-  editor.value?.chain().focus().toggleBulletList().run()
+
+  editor.value?.chain().focus().toggleBulletList().run();
 }
 
 function toggleOrdered() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleOrderedList(textarea))
-    return
+    applySourceEdit((textarea) => toggleOrderedList(textarea));
+    return;
   }
-  editor.value?.chain().focus().toggleOrderedList().run()
+
+  editor.value?.chain().focus().toggleOrderedList().run();
 }
 
 function toggleTask() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleTaskList(textarea))
-    return
+    applySourceEdit((textarea) => toggleTaskList(textarea));
+    return;
   }
-  editor.value?.chain().focus().toggleTaskList().run()
+
+  editor.value?.chain().focus().toggleTaskList().run();
 }
 
 function toggleQuote() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleBlockquote(textarea))
-    return
+    applySourceEdit((textarea) => toggleBlockquote(textarea));
+    return;
   }
-  editor.value?.chain().focus().toggleBlockquote().run()
+
+  editor.value?.chain().focus().toggleBlockquote().run();
 }
 
 function toggleCode() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => toggleCodeBlock(textarea))
-    return
+    applySourceEdit((textarea) => toggleCodeBlock(textarea));
+    return;
   }
-  editor.value?.chain().focus().toggleCodeBlock().run()
+
+  editor.value?.chain().focus().toggleCodeBlock().run();
 }
 
 function promptLink() {
-  const href = window.prompt('Link-URL')
+  const href = window.prompt("Link-URL");
+
   if (!href) {
-    return
+    return;
   }
+
   if (isSourceMode.value) {
-    applySourceEdit(textarea => insertLink(textarea, href))
-    return
+    applySourceEdit((textarea) => insertLink(textarea, href));
+    return;
   }
-  editor.value?.chain().focus().toggleLink({ href }).run()
+
+  editor.value?.chain().focus().toggleLink({ href }).run();
 }
 
 async function uploadImageFile(file: File) {
-  const form = new FormData()
-  form.append('file', file)
+  const form = new FormData();
+
+  form.append("file", file);
   const result = await apiFetch<{ path: string }>(
     `/api/collectives/${props.collectiveId}/pages/${props.pageId}/attachments`,
-    { method: 'POST', body: form },
-  )
-  return result.path
+    { method: "POST", body: form },
+  );
+
+  return result.path;
 }
 
 async function insertImageAction() {
-  const input = window.document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
+  const input = window.document.createElement("input");
+
+  input.type = "file";
+  input.accept = "image/*";
+
   input.onchange = () => {
-    const file = input.files?.[0]
+    const file = input.files?.[0];
+
     if (!file) {
-      return
+      return;
     }
-    void uploadImageFile(file).then((path) => {
-      if (isSourceMode.value) {
-        applySourceEdit(textarea => insertImage(textarea, path))
-        return
-      }
-      editor.value?.chain().focus().setImage({ src: path }).run()
-    }).catch(() => {
-      const src = window.prompt('Upload fehlgeschlagen. Bild-URL eingeben')
-      if (!src) {
-        return
-      }
-      if (isSourceMode.value) {
-        applySourceEdit(textarea => insertImage(textarea, src))
-        return
-      }
-      editor.value?.chain().focus().setImage({ src }).run()
-    })
-  }
-  input.click()
+
+    void uploadImageFile(file)
+      .then((path) => {
+        if (isSourceMode.value) {
+          applySourceEdit((textarea) => insertImage(textarea, path));
+          return;
+        }
+
+        editor.value?.chain().focus().setImage({ src: path }).run();
+      })
+      .catch(() => {
+        const src = window.prompt("Upload fehlgeschlagen. Bild-URL eingeben");
+
+        if (!src) {
+          return;
+        }
+
+        if (isSourceMode.value) {
+          applySourceEdit((textarea) => insertImage(textarea, src));
+          return;
+        }
+
+        editor.value?.chain().focus().setImage({ src }).run();
+      });
+  };
+
+  input.click();
 }
 
 function insertTableAction() {
   if (isSourceMode.value) {
-    applySourceEdit(textarea => insertTable(textarea))
-    return
+    applySourceEdit((textarea) => insertTable(textarea));
+    return;
   }
-  editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+
+  editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
 }
 
 function serializeContent() {
-  if (viewMode.value === 'source') {
-    applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value)
-    return sourceMarkdown.value
+  if (viewMode.value === "source") {
+    applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value);
+    return sourceMarkdown.value;
   }
-  return editor.value ? serializeMarkdown(editor.value.state.doc) : ''
+
+  return editor.value ? serializeMarkdown(editor.value.state.doc) : "";
 }
 
 onMounted(() => {
   session.connect({
     serialize: serializeContent,
     seedInitialContent,
-  })
-  session.ydoc.on('update', (_update, origin) => {
-    if (viewMode.value === 'source' && origin !== APPLY_MARKDOWN_ORIGIN) {
-      sourceRemoteStale.value = true
+  });
+  session.ydoc.on("update", (_update, origin) => {
+    if (viewMode.value === "source" && origin !== APPLY_MARKDOWN_ORIGIN) {
+      sourceRemoteStale.value = true;
     }
-  })
-  window.addEventListener('beforeunload', saveBeforeUnload)
-})
+  });
+  window.addEventListener("beforeunload", saveBeforeUnload);
+});
 
 watch(sourceMarkdown, () => {
-  if (viewMode.value === 'source') {
-    syncEditorFromMarkdown()
+  if (viewMode.value === "source") {
+    syncEditorFromMarkdown();
   }
-})
+});
 
 watch(isSourceMode, (enabled) => {
   if (!enabled) {
-    return
+    return;
   }
+
   void nextTick(() => {
-    syncEditorFromMarkdown()
-    const proxy = ensureSourceProxy()
-    proxy.value = sourceMarkdown.value
-    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length)
-  })
-})
+    syncEditorFromMarkdown();
+    const proxy = ensureSourceProxy();
+
+    proxy.value = sourceMarkdown.value;
+    proxy.setSelectionRange(sourceMarkdown.value.length, sourceMarkdown.value.length);
+  });
+});
 
 function saveBeforeUnload() {
-  void session.save(true)
+  void session.save(true);
 }
 
 onBeforeUnmount(async () => {
-  window.removeEventListener('beforeunload', saveBeforeUnload)
-  await session.close()
-  editor.value?.destroy()
-})
+  window.removeEventListener("beforeunload", saveBeforeUnload);
+  await session.close();
+  editor.value?.destroy();
+});
 
-defineExpose({ session })
+defineExpose({ session });
 </script>
 
 <template>
@@ -505,51 +598,117 @@ defineExpose({ session })
         v-if="editor && showFormattingToolbar && !toolbarDisabled"
         class="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-1"
       >
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('bold') }" :disabled="toolbarDisabled" @click="toggleBold">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('bold') }"
+          :disabled="toolbarDisabled"
+          @click="toggleBold"
+        >
           <BoldIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('italic') }" :disabled="toolbarDisabled" @click="toggleItalic">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('italic') }"
+          :disabled="toolbarDisabled"
+          @click="toggleItalic"
+        >
           <ItalicIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('strike') }" :disabled="toolbarDisabled" @click="toggleStrike">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('strike') }"
+          :disabled="toolbarDisabled"
+          @click="toggleStrike"
+        >
           <StrikethroughIcon class="size-4" />
         </Button>
 
         <Separator orientation="vertical" class="mx-1 h-6" />
-        
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 1 }) }" :disabled="toolbarDisabled" @click="setHeading(1)">
+
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 1 }) }"
+          :disabled="toolbarDisabled"
+          @click="setHeading(1)"
+        >
           <Heading1Icon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 2 }) }" :disabled="toolbarDisabled" @click="setHeading(2)">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 2 }) }"
+          :disabled="toolbarDisabled"
+          @click="setHeading(2)"
+        >
           <Heading2Icon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 3 }) }" :disabled="toolbarDisabled" @click="setHeading(3)">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('heading', { level: 3 }) }"
+          :disabled="toolbarDisabled"
+          @click="setHeading(3)"
+        >
           <Heading3Icon class="size-4" />
         </Button>
 
         <Separator orientation="vertical" class="mx-1 h-6" />
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('bulletList') }" :disabled="toolbarDisabled" @click="toggleBullet">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('bulletList') }"
+          :disabled="toolbarDisabled"
+          @click="toggleBullet"
+        >
           <ListIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('orderedList') }" :disabled="toolbarDisabled" @click="toggleOrdered">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('orderedList') }"
+          :disabled="toolbarDisabled"
+          @click="toggleOrdered"
+        >
           <ListOrderedIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('taskList') }" :disabled="toolbarDisabled" @click="toggleTask">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('taskList') }"
+          :disabled="toolbarDisabled"
+          @click="toggleTask"
+        >
           <ListChecksIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('blockquote') }" :disabled="toolbarDisabled" @click="toggleQuote">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('blockquote') }"
+          :disabled="toolbarDisabled"
+          @click="toggleQuote"
+        >
           <QuoteIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :class="{ 'bg-accent': !isSourceMode && editor.isActive('codeBlock') }" :disabled="toolbarDisabled" @click="toggleCode">
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="{ 'bg-accent': !isSourceMode && editor.isActive('codeBlock') }"
+          :disabled="toolbarDisabled"
+          @click="toggleCode"
+        >
           <Code2Icon class="size-4" />
         </Button>
 
@@ -569,11 +728,21 @@ defineExpose({ session })
 
         <Separator orientation="vertical" class="mx-1 h-6" />
 
-        <Button variant="ghost" size="icon" :disabled="toolbarDisabled || isSourceMode" @click="editor.chain().focus().undo().run()">
+        <Button
+          variant="ghost"
+          size="icon"
+          :disabled="toolbarDisabled || isSourceMode"
+          @click="editor.chain().focus().undo().run()"
+        >
           <UndoIcon class="size-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" :disabled="toolbarDisabled || isSourceMode" @click="editor.chain().focus().redo().run()">
+        <Button
+          variant="ghost"
+          size="icon"
+          :disabled="toolbarDisabled || isSourceMode"
+          @click="editor.chain().focus().redo().run()"
+        >
           <RedoIcon class="size-4" />
         </Button>
       </div>
@@ -586,10 +755,7 @@ defineExpose({ session })
       </div>
 
       <div class="ml-auto flex items-center gap-3">
-        <EditorViewModeToggle
-          :model-value="viewMode"
-          @update:model-value="switchViewMode"
-        />
+        <EditorViewModeToggle :model-value="viewMode" @update:model-value="switchViewMode" />
       </div>
     </div>
 
@@ -597,7 +763,8 @@ defineExpose({ session })
       v-if="sourceRemoteStale"
       class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
     >
-      Die Seite wurde von einem anderen Nutzer geändert — bitte den Modus wechseln, um den Inhalt zu aktualisieren.
+      Die Seite wurde von einem anderen Nutzer geändert — bitte den Modus wechseln, um den Inhalt zu
+      aktualisieren.
     </div>
 
     <div
@@ -605,9 +772,7 @@ defineExpose({ session })
       class="flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
     >
       <span>Die Seite wurde außerhalb dieser Sitzung geändert.</span>
-      <Button variant="outline" size="sm" @click="emit('reload')">
-        Neu laden
-      </Button>
+      <Button variant="outline" size="sm" @click="emit('reload')"> Neu laden </Button>
     </div>
 
     <div
@@ -615,15 +780,10 @@ defineExpose({ session })
       class="flex items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
     >
       <span>Die Bearbeitungssitzung ist abgelaufen.</span>
-      <Button variant="outline" size="sm" @click="emit('reload')">
-        Neu laden
-      </Button>
+      <Button variant="outline" size="sm" @click="emit('reload')"> Neu laden </Button>
     </div>
 
-    <div
-      v-if="viewMode === 'source'"
-      class="h-full flex justify-center"
-    >
+    <div v-if="viewMode === 'source'" class="h-full flex justify-center">
       <div
         ref="sourceEditorRef"
         class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-[700px]"
@@ -635,10 +795,7 @@ defineExpose({ session })
       />
     </div>
 
-    <div
-      v-else
-      class="bg-background"
-    >
+    <div v-else class="bg-background">
       <EditorContent :editor="editor" class="flex justify-center" />
     </div>
   </div>

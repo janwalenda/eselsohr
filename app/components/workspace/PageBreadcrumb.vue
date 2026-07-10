@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CollectivePageNode, CollectiveSummary } from '~~/shared/collectives'
+import type { CollectivePageNode, CollectiveSummary } from "~~/shared/collectives";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,12 +7,12 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
+} from "@/components/ui/breadcrumb";
 
 defineProps<{
-  collective: CollectiveSummary | null
-  trail: CollectivePageNode[]
-}>()
+  collective: CollectiveSummary | null;
+  trail: CollectivePageNode[];
+}>();
 </script>
 
 <template>
@@ -20,11 +20,11 @@ defineProps<{
     <BreadcrumbList>
       <BreadcrumbItem>
         <BreadcrumbPage v-if="trail.length === 0">
-          {{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}
+          {{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}
         </BreadcrumbPage>
         <BreadcrumbLink v-else as-child>
           <NuxtLink :to="`/app/${collective.id}`">
-            {{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}
+            {{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}
           </NuxtLink>
         </BreadcrumbLink>
       </BreadcrumbItem>

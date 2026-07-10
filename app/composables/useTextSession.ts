@@ -1,200 +1,226 @@
-import { computed, ref, shallowRef } from 'vue'
-import { Awareness } from 'y-protocols/awareness'
-import * as Y from 'yjs'
-import { createTextApi } from '@/lib/nc-text/apis'
-import { HttpProvider } from '@/lib/nc-text/HttpProvider'
-import { ERROR_TYPE, SyncService } from '@/lib/nc-text/SyncService'
-import { getDocumentState } from '@/lib/nc-text/yjs'
-import type { CollabSession, OpenData, TextConnection } from '@/lib/nc-text/types'
+import { computed, ref, shallowRef } from "vue";
+import { Awareness } from "y-protocols/awareness";
+import * as Y from "yjs";
+import { createTextApi } from "@/lib/nc-text/apis";
+import { HttpProvider } from "@/lib/nc-text/HttpProvider";
+import { ERROR_TYPE, SyncService } from "@/lib/nc-text/SyncService";
+import { getDocumentState } from "@/lib/nc-text/yjs";
+import type { CollabSession, OpenData, TextConnection } from "@/lib/nc-text/types";
 
 export interface TextSessionUser {
-  name: string
-  color: string
+  name: string;
+  color: string;
 }
 
 export interface ConnectCallbacks {
   /** Serialize the current editor document to markdown (for autosave/save). */
-  serialize: () => string
+  serialize: () => string;
   /** Seed the empty Yjs doc from markdown when the server has no saved state yet. */
-  seedInitialContent: (doc: Y.Doc, content: string) => void
+  seedInitialContent: (doc: Y.Doc, content: string) => void;
 }
 
-export type TextSessionStatus = 'idle' | 'connecting' | 'ready' | 'readonly' | 'error'
+export type TextSessionStatus = "idle" | "connecting" | "ready" | "readonly" | "error";
 
 /**
  * Drive a collaborative Nextcloud Text editing session for one collective page.
  * Creates the shared Yjs document and awareness eagerly so the editor can bind to
  * them, then `connect()` opens the server session and starts syncing.
  */
-export function useTextSession(
-  collectiveId: number,
-  pageId: number,
-  user: TextSessionUser,
-) {
-  const ydoc = new Y.Doc()
-  const awareness = new Awareness(ydoc)
-  awareness.setLocalStateField('user', {
+export function useTextSession(collectiveId: number, pageId: number, user: TextSessionUser) {
+  const ydoc = new Y.Doc();
+
+  const awareness = new Awareness(ydoc);
+
+  awareness.setLocalStateField("user", {
     name: user.name,
     color: user.color,
     clientId: ydoc.clientID,
-  })
+  });
 
-  const api = createTextApi(collectiveId, pageId)
-  const connection = shallowRef<TextConnection | undefined>(undefined)
+  const api = createTextApi(collectiveId, pageId);
 
-  const status = ref<TextSessionStatus>('idle')
-  const readOnly = ref(true)
-  const dirty = ref(false)
-  const saving = ref(false)
-  const collaborators = ref<CollabSession[]>([])
-  const conflictContent = ref<string | null>(null)
-  const expired = ref(false)
-  const connectionIssue = ref(false)
-  const lastError = ref<unknown>(null)
+  const connection = shallowRef<TextConnection | undefined>(undefined);
 
-  let callbacks: ConnectCallbacks | null = null
-  let provider: HttpProvider | null = null
-  let autosaveTimer: ReturnType<typeof setTimeout> | undefined
-  let openData: OpenData | null = null
+  const status = ref<TextSessionStatus>("idle");
+
+  const readOnly = ref(true);
+
+  const dirty = ref(false);
+
+  const saving = ref(false);
+
+  const collaborators = ref<CollabSession[]>([]);
+
+  const conflictContent = ref<string | null>(null);
+
+  const expired = ref(false);
+
+  const connectionIssue = ref(false);
+
+  const lastError = ref<unknown>(null);
+
+  let callbacks: ConnectCallbacks | null = null;
+
+  let provider: HttpProvider | null = null;
+
+  let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let openData: OpenData | null = null;
 
   const openConnection = async (): Promise<OpenData> => {
-    const data = await api.open()
-    openData = data
+    const data = await api.open();
+
+    openData = data;
     connection.value = {
       documentId: data.document.id,
       sessionId: data.session.id,
       sessionToken: data.session.token,
       baseVersionEtag: data.document.baseVersionEtag,
-      filePath: data.filePath ?? '',
-    }
-    return data
-  }
+      filePath: data.filePath ?? "",
+    };
+    return data;
+  };
 
-  const syncService = new SyncService({ api, connection, openConnection })
+  const syncService = new SyncService({ api, connection, openConnection });
 
   function bindBus() {
-    const bus = syncService.bus
+    const bus = syncService.bus;
 
-    bus.on('opened', (data) => {
-      readOnly.value = data.readOnly
-      status.value = data.readOnly ? 'readonly' : 'connecting'
-      syncService.startSync()
-      if (!data.documentState && typeof data.content === 'string') {
-        callbacks?.seedInitialContent(ydoc, data.content)
+    bus.on("opened", (data) => {
+      readOnly.value = data.readOnly;
+      status.value = data.readOnly ? "readonly" : "connecting";
+      syncService.startSync();
+
+      if (!data.documentState && typeof data.content === "string") {
+        callbacks?.seedInitialContent(ydoc, data.content);
       }
-    })
+    });
 
-    bus.on('change', ({ sessions }) => {
-      collaborators.value = sessions ?? []
-      connectionIssue.value = false
-    })
+    bus.on("change", ({ sessions }) => {
+      collaborators.value = sessions ?? [];
+      connectionIssue.value = false;
+    });
 
-    bus.on('sync', () => {
+    bus.on("sync", () => {
       if (syncService.pushError > 0) {
-        void syncService.sendStepsNow().catch(() => {})
+        void syncService.sendStepsNow().catch(() => {});
       }
-    })
+    });
 
-    bus.on('stateChange', (state) => {
-      if (state.initialLoading && status.value === 'connecting') {
-        status.value = readOnly.value ? 'readonly' : 'ready'
+    bus.on("stateChange", (state) => {
+      if (state.initialLoading && status.value === "connecting") {
+        status.value = readOnly.value ? "readonly" : "ready";
       }
-      if (Object.prototype.hasOwnProperty.call(state, 'dirty') && state.dirty) {
-        dirty.value = true
-        scheduleAutosave()
-      }
-    })
 
-    bus.on('error', ({ type, data }) => {
-      lastError.value = { type, data }
+      if (Object.prototype.hasOwnProperty.call(state, "dirty") && state.dirty) {
+        dirty.value = true;
+        scheduleAutosave();
+      }
+    });
+
+    bus.on("error", ({ type, data }) => {
+      lastError.value = { type, data };
+
       if (type === ERROR_TYPE.LOAD_ERROR && (data as { status?: number })?.status === 412) {
-        expired.value = true
-        status.value = 'error'
+        expired.value = true;
+        status.value = "error";
       }
-      if (type === ERROR_TYPE.SAVE_COLLISION) {
-        conflictContent.value = (data as { outsideChange?: string })?.outsideChange ?? null
-      }
-      if (type === ERROR_TYPE.CONNECTION_FAILED || type === ERROR_TYPE.SOURCE_NOT_FOUND) {
-        connectionIssue.value = true
-      }
-      if (type === ERROR_TYPE.PUSH_FORBIDDEN) {
-        readOnly.value = true
-        status.value = 'readonly'
-      }
-    })
 
-    bus.on('idle', () => {
-      status.value = 'idle'
-    })
+      if (type === ERROR_TYPE.SAVE_COLLISION) {
+        conflictContent.value = (data as { outsideChange?: string })?.outsideChange ?? null;
+      }
+
+      if (type === ERROR_TYPE.CONNECTION_FAILED || type === ERROR_TYPE.SOURCE_NOT_FOUND) {
+        connectionIssue.value = true;
+      }
+
+      if (type === ERROR_TYPE.PUSH_FORBIDDEN) {
+        readOnly.value = true;
+        status.value = "readonly";
+      }
+    });
+
+    bus.on("idle", () => {
+      status.value = "idle";
+    });
   }
 
   function scheduleAutosave() {
     if (autosaveTimer) {
-      clearTimeout(autosaveTimer)
+      clearTimeout(autosaveTimer);
     }
+
     autosaveTimer = setTimeout(() => {
-      void save(false).catch(() => {})
-    }, 2000)
+      void save(false).catch(() => {});
+    }, 2000);
   }
 
   async function save(manualSave = true): Promise<void> {
     if (!connection.value || !callbacks || readOnly.value) {
-      return
+      return;
     }
-    saving.value = true
+
+    saving.value = true;
+
     try {
-      await syncService.sendRemainingSteps()
+      await syncService.sendRemainingSteps();
       const result = await api.save(connection.value, {
         version: syncService.version,
         autosaveContent: callbacks.serialize(),
         documentState: getDocumentState(ydoc),
         manualSave,
-      })
+      });
+
       if (result.data.outsideChange) {
-        conflictContent.value = result.data.outsideChange
+        conflictContent.value = result.data.outsideChange;
+      } else {
+        dirty.value = false;
       }
-      else {
-        dirty.value = false
-      }
+
       if (result.data.document) {
-        connection.value = { ...connection.value, baseVersionEtag: result.data.document.baseVersionEtag }
+        connection.value = {
+          ...connection.value,
+          baseVersionEtag: result.data.document.baseVersionEtag,
+        };
       }
-    }
-    finally {
-      saving.value = false
+    } finally {
+      saving.value = false;
     }
   }
 
   async function connect(cb: ConnectCallbacks) {
-    callbacks = cb
-    provider = new HttpProvider({ doc: ydoc, awareness, syncService })
-    status.value = 'connecting'
-    await syncService.open()
+    callbacks = cb;
+    provider = new HttpProvider({ doc: ydoc, awareness, syncService });
+    status.value = "connecting";
+    await syncService.open();
   }
 
-  let closed = false
+  let closed = false;
 
   async function close() {
     if (closed) {
-      return
+      return;
     }
-    closed = true
+
+    closed = true;
 
     if (autosaveTimer) {
-      clearTimeout(autosaveTimer)
+      clearTimeout(autosaveTimer);
     }
+
     if (dirty.value && !expired.value && !conflictContent.value) {
-      await save(true).catch(() => {})
+      await save(true).catch(() => {});
     }
-    await syncService.close().catch(() => {})
-    provider?.destroy()
-    provider = null
-    awareness.destroy()
-    ydoc.destroy()
-    status.value = 'idle'
+
+    await syncService.close().catch(() => {});
+    provider?.destroy();
+    provider = null;
+    awareness.destroy();
+    ydoc.destroy();
+    status.value = "idle";
   }
 
-  bindBus()
+  bindBus();
 
   return {
     ydoc,
@@ -212,7 +238,7 @@ export function useTextSession(
     connect,
     save,
     close,
-  }
+  };
 }
 
-export type TextSession = ReturnType<typeof useTextSession>
+export type TextSession = ReturnType<typeof useTextSession>;

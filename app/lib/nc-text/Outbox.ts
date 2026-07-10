@@ -8,70 +8,76 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { encodeArrayBuffer } from './base64'
-import { logger } from './logger'
+import { encodeArrayBuffer } from "./base64";
+import { logger } from "./logger";
 
 export interface Sendable {
-  steps: string[]
-  awareness: string
-  recoveryAttempt?: number
+  steps: string[];
+  awareness: string;
+  recoveryAttempt?: number;
 }
 
 export default class Outbox {
-  #awarenessUpdate = ''
-  #syncUpdate = ''
-  #syncQuery = ''
-  #recoveryAttemptCounter = 0
-  #isRecoveringSync = false
+  #awarenessUpdate = "";
+  #syncUpdate = "";
+  #syncQuery = "";
+  #recoveryAttemptCounter = 0;
+  #isRecoveringSync = false;
 
   storeStep(step: Uint8Array) {
-    const encoded = encodeArrayBuffer(step)
-    if (encoded < 'AAA' || encoded > 'Ag') {
-      logger.warn('Unexpected step type:', { step, encoded })
-      return
+    const encoded = encodeArrayBuffer(step);
+
+    if (encoded < "AAA" || encoded > "Ag") {
+      logger.warn("Unexpected step type:", { step, encoded });
+      return;
     }
-    if (encoded < 'AAE') {
-      this.#syncQuery = encoded
-      return
+
+    if (encoded < "AAE") {
+      this.#syncQuery = encoded;
+      return;
     }
-    if (encoded < 'AQ') {
-      this.#syncUpdate = encoded
-      return
+
+    if (encoded < "AQ") {
+      this.#syncUpdate = encoded;
+      return;
     }
-    this.#awarenessUpdate = encoded
+
+    this.#awarenessUpdate = encoded;
   }
 
   setRecoveringSync() {
-    this.#isRecoveringSync = true
-    this.#recoveryAttemptCounter++
+    this.#isRecoveringSync = true;
+    this.#recoveryAttemptCounter++;
   }
 
   getDataToSend(): Sendable {
     return {
-      steps: [this.#syncUpdate, this.#syncQuery].filter(s => s),
+      steps: [this.#syncUpdate, this.#syncQuery].filter((s) => s),
       awareness: this.#awarenessUpdate,
       ...this.recoveryData,
-    }
+    };
   }
 
   get recoveryData(): { recoveryAttempt?: number } {
-    return this.#isRecoveringSync ? { recoveryAttempt: this.#recoveryAttemptCounter } : {}
+    return this.#isRecoveringSync ? { recoveryAttempt: this.#recoveryAttemptCounter } : {};
   }
 
   get hasUpdate(): boolean {
-    return !!this.#syncUpdate
+    return !!this.#syncUpdate;
   }
 
   clearSentData({ steps, awareness }: Sendable) {
     if (steps.includes(this.#syncUpdate)) {
-      this.#syncUpdate = ''
+      this.#syncUpdate = "";
     }
+
     if (steps.includes(this.#syncQuery)) {
-      this.#syncQuery = ''
-      this.#isRecoveringSync = false
+      this.#syncQuery = "";
+      this.#isRecoveringSync = false;
     }
+
     if (this.#awarenessUpdate === awareness) {
-      this.#awarenessUpdate = ''
+      this.#awarenessUpdate = "";
     }
   }
 }

@@ -8,25 +8,28 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { prosemirrorToYXmlFragment } from 'y-prosemirror'
-import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from 'yjs'
-import { markdownToProseMirrorNode } from './apply-markdown'
+import { prosemirrorToYXmlFragment } from "y-prosemirror";
+import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from "yjs";
+import { markdownToProseMirrorNode } from "./apply-markdown";
 
 export function seedInitialContent(ydoc: Doc, content: string) {
   if (!content?.trim()) {
-    return
+    return;
   }
 
-  const node = markdownToProseMirrorNode(content)
+  const node = markdownToProseMirrorNode(content);
 
-  const baseDoc = new Doc()
+  const baseDoc = new Doc();
+
   // Idempotent initial state requires a fixed clientID (see Text PR #5589).
-  baseDoc.clientID = 0
-  const fragment = baseDoc.get('default', XmlFragment) as XmlFragment
-  if (!fragment.doc) {
-    return
-  }
-  prosemirrorToYXmlFragment(node, fragment)
+  baseDoc.clientID = 0;
+  const fragment = baseDoc.get("default", XmlFragment) as XmlFragment;
 
-  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc))
+  if (!fragment.doc) {
+    return;
+  }
+
+  prosemirrorToYXmlFragment(node, fragment);
+
+  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc));
 }

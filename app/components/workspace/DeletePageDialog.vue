@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,27 +7,30 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 
-const props = withDefaults(defineProps<{
-  open: boolean
-  title?: string
-}>(), {
-  title: '',
-})
+withDefaults(
+  defineProps<{
+    open: boolean;
+    title?: string;
+  }>(),
+  {
+    title: "",
+  },
+);
 
 const emit = defineEmits<{
-  'update:open': [value: boolean]
-  submit: []
-}>()
+  "update:open": [value: boolean];
+  submit: [];
+}>();
 
 function close() {
-  emit('update:open', false)
+  emit("update:open", false);
 }
 
 function handleSubmit() {
-  emit('submit')
-  close()
+  emit("submit");
+  close();
 }
 </script>
 
@@ -42,12 +45,8 @@ function handleSubmit() {
       </DialogHeader>
 
       <DialogFooter>
-        <Button variant="outline" @click="close">
-          Abbrechen
-        </Button>
-        <Button variant="destructive" @click="handleSubmit">
-          Löschen
-        </Button>
+        <Button variant="outline" @click="close"> Abbrechen </Button>
+        <Button variant="destructive" @click="handleSubmit"> Löschen </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
