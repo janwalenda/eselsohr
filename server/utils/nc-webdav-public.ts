@@ -47,6 +47,7 @@ async function getPublicDavResponse(
 
 export async function readPublicPageContent(ncUrl: string, token: string, page: PageDavTarget) {
   const relativePath = getPageDavRelativePath(page);
+
   const response = await getPublicDavResponse(ncUrl, token, relativePath, {
     method: "GET",
     headers: {
