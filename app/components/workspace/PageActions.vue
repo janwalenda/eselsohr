@@ -8,6 +8,7 @@ import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
 import DeletePageDialog from "@/components/workspace/DeletePageDialog.vue";
 import MovePageDialog from "@/components/workspace/MovePageDialog.vue";
 import RenamePageDialog from "@/components/workspace/RenamePageDialog.vue";
+import SharePageDialog from "@/components/workspace/SharePageDialog.vue";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,6 +33,8 @@ const renameOpen = ref(false);
 const moveOpen = ref(false);
 
 const deleteOpen = ref(false);
+
+const shareOpen = ref(false);
 
 const moveOptions = computed(() =>
   props.flatPages
@@ -106,6 +109,7 @@ async function handleDelete() {
         </DropdownMenuItem>
         <DropdownMenuItem @select.prevent="renameOpen = true"> Umbenennen </DropdownMenuItem>
         <DropdownMenuItem @select.prevent="moveOpen = true"> Verschieben </DropdownMenuItem>
+        <DropdownMenuItem @select.prevent="shareOpen = true"> Öffentlich teilen </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" @select.prevent="deleteOpen = true">
           Löschen
@@ -130,5 +134,6 @@ async function handleDelete() {
       @submit="handleMove"
     />
     <DeletePageDialog v-model:open="deleteOpen" :title="page.title" @submit="handleDelete" />
+    <SharePageDialog v-model:open="shareOpen" :collective-id="collectiveId" :page="page" />
   </div>
 </template>

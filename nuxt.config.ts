@@ -39,6 +39,13 @@ export default defineNuxtConfig({
   runtimeConfig: {
     sessionPassword: process.env.NUXT_SESSION_PASSWORD || "",
     appName: process.env.NUXT_APP_NAME || "Eselsohr",
+    databaseUrl: process.env.DATABASE_URL || "",
+    pgHost: process.env.PGHOST || "",
+    pgDatabase: process.env.PGDATABASE || "",
+    pgUser: process.env.PGUSER || "",
+    pgPassword: process.env.PGPASSWORD || "",
+    pgSslMode: process.env.PGSSLMODE || "",
+    pgChannelBinding: process.env.PGCHANNELBINDING || "",
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "http://localhost:3000",
     },
