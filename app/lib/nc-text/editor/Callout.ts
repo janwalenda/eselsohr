@@ -4,37 +4,34 @@
  * markdown serializer. Types mirror nextcloud/text's callout set.
  */
 
-import { Node, mergeAttributes } from '@tiptap/core'
-import type { CalloutType } from './markdownit'
+import { Node, mergeAttributes } from "@tiptap/core";
+import type { CalloutType } from "./markdownit";
 
 export const Callout = Node.create({
-  name: 'callout',
-  group: 'block',
-  content: 'block+',
+  name: "callout",
+  group: "block",
+  content: "block+",
   defining: true,
 
   addAttributes() {
     return {
       type: {
-        default: 'info' as CalloutType,
-        parseHTML: element => element.getAttribute('data-callout-type') ?? 'info',
-        renderHTML: attributes => ({ 'data-callout-type': attributes.type }),
+        default: "info" as CalloutType,
+        parseHTML: (element) => element.getAttribute("data-callout-type") ?? "info",
+        renderHTML: (attributes) => ({ "data-callout-type": attributes.type }),
       },
-    }
+    };
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-callout-type]' }]
+    return [{ tag: "div[data-callout-type]" }];
   },
 
   renderHTML({ HTMLAttributes }) {
-    const type = (HTMLAttributes as Record<string, string>)['data-callout-type'] ?? 'info'
-    return [
-      'div',
-      mergeAttributes(HTMLAttributes, { class: `callout callout--${type}` }),
-      0,
-    ]
-  },
-})
+    const type = (HTMLAttributes as Record<string, string>)["data-callout-type"] ?? "info";
 
-export default Callout
+    return ["div", mergeAttributes(HTMLAttributes, { class: `callout callout--${type}` }), 0];
+  },
+});
+
+export default Callout;

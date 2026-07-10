@@ -4,10 +4,10 @@ import type {
   CollectivePageNode,
   CreatePageInput,
   UpdatePageInput,
-} from '~~/shared/collectives'
-import { resolveCreateParentId } from '~~/shared/collectives'
-import { extractApiErrorMessage } from '~~/shared/api-errors'
-import { toast } from 'vue-sonner'
+} from "~~/shared/collectives";
+import { resolveCreateParentId } from "~~/shared/collectives";
+import { extractApiErrorMessage } from "~~/shared/api-errors";
+import { toast } from "vue-sonner";
 import {
   ChevronRightIcon,
   FileTextIcon,
@@ -16,172 +16,166 @@ import {
   PencilIcon,
   Trash2Icon,
   WaypointsIcon,
-} from 'lucide-vue-next'
-import { computed, ref } from 'vue'
-import CreatePageDialog from '@/components/workspace/CreatePageDialog.vue'
-import DeletePageDialog from '@/components/workspace/DeletePageDialog.vue'
-import MovePageDialog from '@/components/workspace/MovePageDialog.vue'
-import RenamePageDialog from '@/components/workspace/RenamePageDialog.vue'
-import { Button } from '@/components/ui/button'
+} from "lucide-vue-next";
+import { computed, ref } from "vue";
+import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
+import DeletePageDialog from "@/components/workspace/DeletePageDialog.vue";
+import MovePageDialog from "@/components/workspace/MovePageDialog.vue";
+import RenamePageDialog from "@/components/workspace/RenamePageDialog.vue";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/dropdown-menu";
+import { SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 
 defineOptions({
-  name: 'PageTree',
-})
+  name: "PageTree",
+});
 
 const props = defineProps<{
-  collectiveId: number
-  nodes: CollectivePageNode[]
-  flatPages: CollectivePageNode[]
-  activePageId?: number | null
-  createPage: (input: CreatePageInput) => Promise<CollectivePage>
-  updatePage: (pageId: number, input: UpdatePageInput) => Promise<CollectivePage>
-  deletePage: (pageId: number) => Promise<CollectivePage>
-}>()
+  collectiveId: number;
+  nodes: CollectivePageNode[];
+  flatPages: CollectivePageNode[];
+  activePageId?: number | null;
+  createPage: (input: CreatePageInput) => Promise<CollectivePage>;
+  updatePage: (pageId: number, input: UpdatePageInput) => Promise<CollectivePage>;
+  deletePage: (pageId: number) => Promise<CollectivePage>;
+}>();
 
-const { createPage, updatePage, deletePage } = props
+const { createPage, updatePage, deletePage } = props;
 
-const collapsedIds = ref<number[]>([])
-const createTarget = ref<CollectivePageNode | null>(null)
-const renameTarget = ref<CollectivePageNode | null>(null)
-const moveTarget = ref<CollectivePageNode | null>(null)
-const deleteTarget = ref<CollectivePageNode | null>(null)
+const collapsedIds = ref<number[]>([]);
+
+const createTarget = ref<CollectivePageNode | null>(null);
+
+const renameTarget = ref<CollectivePageNode | null>(null);
+
+const moveTarget = ref<CollectivePageNode | null>(null);
+
+const deleteTarget = ref<CollectivePageNode | null>(null);
 
 function toMessage(error: unknown) {
-  return extractApiErrorMessage(error)
+  return extractApiErrorMessage(error);
 }
 
 function hasActiveDescendant(page: CollectivePageNode): boolean {
   if (page.id === props.activePageId) {
-    return true
+    return true;
   }
 
-  return page.children.some(child => hasActiveDescendant(child))
+  return page.children.some((child) => hasActiveDescendant(child));
 }
 
 function isExpanded(page: CollectivePageNode) {
   if (hasActiveDescendant(page)) {
-    return true
+    return true;
   }
 
-  return !collapsedIds.value.includes(page.id)
+  return !collapsedIds.value.includes(page.id);
 }
 
 function togglePage(page: CollectivePageNode) {
   if (hasActiveDescendant(page) && isExpanded(page)) {
-    return
+    return;
   }
 
   if (isExpanded(page)) {
-    collapsedIds.value = [...collapsedIds.value, page.id]
-    return
+    collapsedIds.value = [...collapsedIds.value, page.id];
+    return;
   }
 
-  collapsedIds.value = collapsedIds.value.filter(id => id !== page.id)
+  collapsedIds.value = collapsedIds.value.filter((id) => id !== page.id);
 }
 
 function handlePageLinkClick(page: CollectivePageNode, event: MouseEvent) {
   if (page.children.length === 0) {
-    return
+    return;
   }
 
-  event.preventDefault()
-  togglePage(page)
+  event.preventDefault();
+  togglePage(page);
 }
 
 const moveOptions = computed(() =>
-  props.flatPages.map(page => ({
+  props.flatPages.map((page) => ({
     id: page.id,
     label: page.title,
   })),
-)
+);
 
 async function handleCreate(title: string) {
   if (!createTarget.value) {
-    return
+    return;
   }
 
   try {
-    const parentId = resolveCreateParentId(createTarget.value)
+    const parentId = resolveCreateParentId(createTarget.value);
+
     const page = await createPage({
       title,
       parentId,
-    })
-    toast.success('Unterseite erstellt')
-    await navigateTo(`/app/${props.collectiveId}/${page.id}`)
-  }
-  catch (error) {
-    toast.error(toMessage(error))
+    });
+
+    toast.success("Unterseite erstellt");
+    await navigateTo(`/app/${props.collectiveId}/${page.id}`);
+  } catch (error) {
+    toast.error(toMessage(error));
   }
 }
 
 async function handleRename(title: string) {
   if (!renameTarget.value) {
-    return
+    return;
   }
 
   try {
-    await updatePage(renameTarget.value.id, { title })
-    toast.success('Seite umbenannt')
-  }
-  catch (error) {
-    toast.error(toMessage(error))
+    await updatePage(renameTarget.value.id, { title });
+    toast.success("Seite umbenannt");
+  } catch (error) {
+    toast.error(toMessage(error));
   }
 }
 
-async function handleMove(payload: { parentId: number | null, index: number }) {
+async function handleMove(payload: { parentId: number | null; index: number }) {
   if (!moveTarget.value) {
-    return
+    return;
   }
 
   try {
-    await updatePage(moveTarget.value.id, payload)
-    toast.success('Seite verschoben')
-  }
-  catch (error) {
-    toast.error(toMessage(error))
+    await updatePage(moveTarget.value.id, payload);
+    toast.success("Seite verschoben");
+  } catch (error) {
+    toast.error(toMessage(error));
   }
 }
 
 async function handleDelete() {
   if (!deleteTarget.value) {
-    return
+    return;
   }
 
-  const deletedPageId = deleteTarget.value.id
+  const deletedPageId = deleteTarget.value.id;
 
   try {
-    await deletePage(deletedPageId)
-    toast.success('Seite gelöscht')
+    await deletePage(deletedPageId);
+    toast.success("Seite gelöscht");
 
     if (props.activePageId === deletedPageId) {
-      await navigateTo(`/app/${props.collectiveId}`)
+      await navigateTo(`/app/${props.collectiveId}`);
     }
-  }
-  catch (error) {
-    toast.error(toMessage(error))
+  } catch (error) {
+    toast.error(toMessage(error));
   }
 }
 </script>
 
 <template>
   <SidebarMenuSub v-if="nodes.length > 0">
-    <SidebarMenuSubItem
-      v-for="page in nodes"
-      :key="page.id"
-      class="space-y-1"
-    >
+    <SidebarMenuSubItem v-for="page in nodes" :key="page.id" class="space-y-1">
       <div class="group flex min-w-0 items-center gap-1">
         <Button
           v-if="page.children.length > 0"
@@ -197,12 +191,11 @@ async function handleDelete() {
         </Button>
         <div v-else class="w-6 shrink-0" />
 
-        <SidebarMenuSubButton
-          as-child
-          :is-active="page.id === activePageId"
-          class="flex-1"
-        >
-          <NuxtLink :to="`/app/${collectiveId}/${page.id}`" @click="handlePageLinkClick(page, $event)">
+        <SidebarMenuSubButton as-child :is-active="page.id === activePageId" class="flex-1">
+          <NuxtLink
+            :to="`/app/${collectiveId}/${page.id}`"
+            @click="handlePageLinkClick(page, $event)"
+          >
             <FileTextIcon class="size-4" />
             <span class="min-w-0 flex-1 truncate">{{ page.title }}</span>
             <DropdownMenu>

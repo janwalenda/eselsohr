@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { LogOutIcon, SearchIcon } from 'lucide-vue-next'
-import CollectiveSidebarGroup from '@/components/workspace/CollectiveSidebarGroup.vue'
-import { Skeleton } from '@/components/ui/skeleton'
+import { LogOutIcon, SearchIcon } from "lucide-vue-next";
+import CollectiveSidebarGroup from "@/components/workspace/CollectiveSidebarGroup.vue";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -15,46 +15,52 @@ import {
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar";
 
-const route = useRoute()
-const { isMobile, setOpenMobile } = useSidebar()
+const route = useRoute();
 
-watch(() => route.fullPath, () => {
-  if (isMobile.value) {
-    setOpenMobile(false)
-  }
-})
+const { isMobile, setOpenMobile } = useSidebar();
 
-const { session, signOut } = useNcSession()
-const { collectives, pending, error } = useCollectives()
+watch(
+  () => route.fullPath,
+  () => {
+    if (isMobile.value) {
+      setOpenMobile(false);
+    }
+  },
+);
 
-const currentCollectiveId = computed(() => Number(route.params.collectiveId))
+const { session, signOut } = useNcSession();
+
+const { collectives, pending, error } = useCollectives();
+
+const currentCollectiveId = computed(() => Number(route.params.collectiveId));
+
 const activePageId = computed(() => {
-  const pageId = Number(route.params.pageId)
-  return Number.isFinite(pageId) ? pageId : null
-})
+  const pageId = Number(route.params.pageId);
+
+  return Number.isFinite(pageId) ? pageId : null;
+});
 
 const nextcloudHost = computed(() => {
   if (!session.value) {
-    return ''
+    return "";
   }
 
   try {
-    return new URL(session.value.ncUrl).host
+    return new URL(session.value.ncUrl).host;
+  } catch {
+    return session.value.ncUrl;
   }
-  catch {
-    return session.value.ncUrl
-  }
-})
+});
 
 async function handleSignOut() {
-  await signOut()
-  await navigateTo('/login')
+  await signOut();
+  await navigateTo("/login");
 }
 
 function openQuickSwitcher() {
-  window.dispatchEvent(new Event('workspace:open-switcher'))
+  window.dispatchEvent(new Event("workspace:open-switcher"));
 }
 </script>
 
@@ -62,13 +68,13 @@ function openQuickSwitcher() {
   <Sidebar collapsible="offcanvas">
     <SidebarHeader>
       <div class="flex items-center gap-2 px-2 py-1.5">
-        <div class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-md text-sm font-semibold">
-          {{ session?.loginName?.charAt(0) ?? 'E' }}
+        <div
+          class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-md text-sm font-semibold"
+        >
+          {{ session?.loginName?.charAt(0) ?? "E" }}
         </div>
         <div class="min-w-0">
-          <div class="truncate text-sm font-medium">
-            Eselsohr
-          </div>
+          <div class="truncate text-sm font-medium">Eselsohr</div>
           <div class="truncate text-xs text-sidebar-foreground/70">
             {{ session?.loginName }}@{{ nextcloudHost }}
           </div>

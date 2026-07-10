@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Toaster as Sonner } from '@/components/ui/sonner'
+import { Toaster as Sonner } from "@/components/ui/sonner";
 
-console.log('Route', useRoute().fullPath)
+console.log("Route", useRoute().fullPath);
 </script>
 
 <template>
