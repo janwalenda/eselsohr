@@ -24,7 +24,6 @@ function openQuickSwitcher() {
           </div>
           <Button tooltip="Schnell wechseln" @click="openQuickSwitcher">
             <SearchIcon class="size-4" />
-            <span>Seite suchen</span>
             <kbd class="ml-auto rounded border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
           </Button>
         </div>
