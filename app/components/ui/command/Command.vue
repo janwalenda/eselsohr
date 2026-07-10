@@ -7,10 +7,13 @@ import { reactive, ref, watch } from "vue";
 import { cn } from "@/lib/utils";
 import { provideCommandContext } from ".";
 
-const props = withDefaults(defineProps<ListboxRootProps & { class?: HTMLAttributes["class"]; filterDisabled?: boolean }>(), {
-  modelValue: "",
-  filterDisabled: false,
-});
+const props = withDefaults(
+  defineProps<ListboxRootProps & { class?: HTMLAttributes["class"]; filterDisabled?: boolean }>(),
+  {
+    modelValue: "",
+    filterDisabled: false,
+  },
+);
 
 const emits = defineEmits<ListboxRootEmits>();
 
@@ -95,9 +98,13 @@ watch(
   },
 );
 
-watch([allItems, allGroups], () => {
-  filterItems();
-}, { deep: true });
+watch(
+  [allItems, allGroups],
+  () => {
+    filterItems();
+  },
+  { deep: true },
+);
 
 provideCommandContext({
   allItems,

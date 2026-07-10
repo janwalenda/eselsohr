@@ -19,7 +19,9 @@ function createPropertyRow(
 }
 
 function rowsFromRecord(properties: PageProperties): EditablePropertyDefinition[] {
-  return propertyDefinitionsFromRecord(properties).map((definition) => createPropertyRow(definition));
+  return propertyDefinitionsFromRecord(properties).map((definition) =>
+    createPropertyRow(definition),
+  );
 }
 
 function mergeExternalRows(
@@ -27,7 +29,9 @@ function mergeExternalRows(
   properties: PageProperties,
 ): EditablePropertyDefinition[] {
   const incoming = propertyDefinitionsFromRecord(properties);
+
   const drafts = existing.filter((definition) => !definition.key.trim());
+
   const existingByKey = new Map(
     existing
       .filter((definition) => definition.key.trim())
@@ -37,9 +41,7 @@ function mergeExternalRows(
   const merged = incoming.map((definition) => {
     const previous = existingByKey.get(definition.key.trim());
 
-    return previous
-      ? { ...definition, id: previous.id }
-      : createPropertyRow(definition);
+    return previous ? { ...definition, id: previous.id } : createPropertyRow(definition);
   });
 
   return [...merged, ...drafts];
@@ -72,6 +74,7 @@ export function usePageProperties(
   },
 ) {
   const definitions = ref<EditablePropertyDefinition[]>([]);
+
   let skipNextPropertiesSync = false;
 
   watch(
