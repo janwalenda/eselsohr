@@ -22,9 +22,9 @@ function openQuickSwitcher() {
           <div class="text-sm text-muted-foreground flex-1">
             Collectives Workspace
           </div>
-          <Button tooltip="Schnell wechseln" @click="openQuickSwitcher">
+          <Button variant="ghost" tooltip="Schnell wechseln" @click="openQuickSwitcher">
             <SearchIcon class="size-4" />
-            <kbd class="ml-auto rounded border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+            <kbd class="ml-auto rounded border px-1.5 py-0.5 text-[10px] max-sm:hidden">⌘K</kbd>
           </Button>
         </div>
       </header>
