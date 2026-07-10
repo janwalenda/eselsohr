@@ -1,5 +1,5 @@
 import type { CollectivePage, PageContentPayload } from "~~/shared/collectives";
-import { useDebounceFn } from "@vueuse/core";
+import type { PageProperties } from "~~/shared/properties";
 import type { MaybeRefOrGetter } from "vue";
 import { computed, ref, toValue, watch } from "vue";
 
@@ -16,6 +16,8 @@ export function usePage(
   const key = computed(() => `collective-page:${collectiveId.value}:${pageId.value}`);
 
   const content = ref("");
+
+  const properties = ref<PageProperties>({});
 
   const etag = ref<string | null>(null);
 
@@ -51,6 +53,7 @@ export function usePage(
     (payload) => {
       hydrated.value = false;
       content.value = payload?.content ?? "";
+      properties.value = payload?.properties ?? {};
       etag.value = payload?.etag ?? null;
       saveError.value = null;
       dirty.value = false;
@@ -59,7 +62,7 @@ export function usePage(
     { immediate: true },
   );
 
-  async function save(nextContent = content.value) {
+  async function save(nextContent = content.value, nextProperties = properties.value) {
     if (!Number.isFinite(collectiveId.value) || !Number.isFinite(pageId.value)) {
       return null;
     }
@@ -74,12 +77,14 @@ export function usePage(
           method: "PUT",
           body: {
             content: nextContent,
+            properties: nextProperties,
             etag: etag.value,
           },
         },
       );
 
       content.value = nextContent;
+      properties.value = nextProperties;
       etag.value = response.etag;
       dirty.value = false;
       return response;
@@ -91,23 +96,13 @@ export function usePage(
     }
   }
 
-  const debouncedSave = useDebounceFn(async () => {
-    if (!dirty.value || saving.value) {
-      return;
-    }
-
-    await save(content.value);
-  }, 1500);
-
   function setContent(nextContent: string) {
     content.value = nextContent;
+  }
 
-    if (!hydrated.value) {
-      return;
-    }
-
-    dirty.value = true;
-    void debouncedSave();
+  /** Updates in-memory properties; persistence goes through the text session autosave. */
+  function setProperties(nextProperties: PageProperties) {
+    properties.value = nextProperties;
   }
 
   async function reload() {
@@ -120,11 +115,13 @@ export function usePage(
     ...asyncData,
     page: computed(() => asyncData.data.value?.page ?? null),
     content,
+    properties,
     etag,
     saving,
     dirty,
     saveError,
     setContent,
+    setProperties,
     save,
     reload,
   };

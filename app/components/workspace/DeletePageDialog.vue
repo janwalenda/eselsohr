@@ -45,7 +45,7 @@ function handleSubmit() {
       </DialogHeader>
 
       <DialogFooter>
-        <Button variant="outline" @click="close"> Abbrechen </Button>
+        <Button @click="close"> Abbrechen </Button>
         <Button variant="destructive" @click="handleSubmit"> Löschen </Button>
       </DialogFooter>
     </DialogContent>

@@ -91,14 +91,14 @@ async function handleDelete() {
 
 <template>
   <div class="flex items-center gap-2">
-    <Button variant="outline" size="sm" @click="createOpen = true">
+    <Button size="sm" @click="createOpen = true">
       <PlusIcon class="size-4" />
       Unterseite
     </Button>
 
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button variant="outline" size="icon">
+        <Button size="icon">
           <MoreHorizontalIcon class="size-4" />
           <span class="sr-only">Seitenaktionen</span>
         </Button>

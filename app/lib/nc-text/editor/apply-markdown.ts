@@ -9,13 +9,16 @@ import { DOMParser } from "@tiptap/pm/model";
 import { prosemirrorToYXmlFragment } from "y-prosemirror";
 import type { Doc } from "yjs";
 import { XmlFragment } from "yjs";
+import { parseMarkdownFile } from "~~/shared/frontmatter";
 import { buildExtensions } from "./extensions";
 import markdownit from "./markdownit";
 
 export const APPLY_MARKDOWN_ORIGIN = "apply-markdown";
 
 export function markdownToProseMirrorNode(content: string): ProseMirrorNode {
-  const html = `${markdownit.render(content)} `;
+  const body = parseMarkdownFile(content).body;
+
+  const html = `${markdownit.render(body)} `;
 
   const schema = getSchema(buildExtensions({ editing: false }));
 

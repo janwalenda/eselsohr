@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build --preset netlify",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:reindex-tags": "node scripts/reindex-page-tags.mjs",
     "prebuild": "npm run lint && npm run format",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
@@ -51,6 +52,7 @@
     "vue-sonner": "^2.0.9",
     "y-prosemirror": "^1.3.7",
     "y-protocols": "^1.0.7",
+    "yaml": "^2.9.0",
     "yjs": "^13.6.31"
   },
   "devDependencies": {

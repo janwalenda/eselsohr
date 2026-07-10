@@ -102,7 +102,7 @@ function handleSubmit() {
       </div>
 
       <DialogFooter>
-        <Button variant="outline" @click="close"> Abbrechen </Button>
+        <Button @click="close"> Abbrechen </Button>
         <Button @click="handleSubmit"> Verschieben </Button>
       </DialogFooter>
     </DialogContent>

@@ -54,6 +54,7 @@ export class SyncService {
   connection: ShallowRef<TextConnection | undefined>;
   version = -1;
   pushError = 0;
+  pushEnabled = false;
   backend?: PollingBackend;
   bus: Emitter<EventTypes> = mitt<EventTypes>();
 
@@ -119,11 +120,19 @@ export class SyncService {
   }
 
   sendStep(step: Uint8Array) {
+    if (!this.pushEnabled) {
+      return;
+    }
+
     this.#outbox.storeStep(step);
     this.sendSteps();
   }
 
   sendRecoveryStep(step: Uint8Array) {
+    if (!this.pushEnabled) {
+      return;
+    }
+
     this.#outbox.setRecoveringSync();
     this.#outbox.storeStep(step);
     this.sendSteps();

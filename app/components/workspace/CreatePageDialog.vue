@@ -76,7 +76,7 @@ function handleSubmit() {
       </div>
 
       <DialogFooter>
-        <Button variant="outline" @click="close"> Abbrechen </Button>
+        <Button @click="close"> Abbrechen </Button>
         <Button @click="handleSubmit"> Erstellen </Button>
       </DialogFooter>
     </DialogContent>

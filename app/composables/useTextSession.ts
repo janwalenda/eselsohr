@@ -17,6 +17,8 @@ export interface ConnectCallbacks {
   serialize: () => string;
   /** Seed the empty Yjs doc from markdown when the server has no saved state yet. */
   seedInitialContent: (doc: Y.Doc, content: string) => void;
+  /** Apply disk content after an outside-change conflict (body + properties). */
+  applyOutsideChange?: (fullMarkdown: string) => void;
 }
 
 export type TextSessionStatus = "idle" | "connecting" | "ready" | "readonly" | "error";
@@ -67,6 +69,8 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
 
   let openData: OpenData | null = null;
 
+  let reconcilingOutsideChange = false;
+
   const openConnection = async (): Promise<OpenData> => {
     const data = await api.open();
 
@@ -83,6 +87,40 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
 
   const syncService = new SyncService({ api, connection, openConnection });
 
+  async function reconcileOutsideChange(outsideChange: string) {
+    if (reconcilingOutsideChange || !connection.value || readOnly.value || dirty.value) {
+      return;
+    }
+
+    reconcilingOutsideChange = true;
+
+    try {
+      callbacks?.applyOutsideChange?.(outsideChange);
+
+      const result = await api.save(connection.value, {
+        version: syncService.version,
+        autosaveContent: outsideChange,
+        documentState: getDocumentState(ydoc),
+        force: true,
+        manualSave: false,
+      });
+
+      if (!result.data.outsideChange) {
+        conflictContent.value = null;
+        dirty.value = false;
+      }
+
+      if (result.data.document) {
+        connection.value = {
+          ...connection.value,
+          baseVersionEtag: result.data.document.baseVersionEtag,
+        };
+      }
+    } finally {
+      reconcilingOutsideChange = false;
+    }
+  }
+
   function bindBus() {
     const bus = syncService.bus;
 
@@ -96,9 +134,16 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
       }
     });
 
-    bus.on("change", ({ sessions }) => {
+    bus.on("change", ({ sessions, document }) => {
       collaborators.value = sessions ?? [];
       connectionIssue.value = false;
+
+      if (document?.baseVersionEtag && connection.value) {
+        connection.value = {
+          ...connection.value,
+          baseVersionEtag: document.baseVersionEtag,
+        };
+      }
     });
 
     bus.on("sync", () => {
@@ -110,6 +155,7 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
     bus.on("stateChange", (state) => {
       if (state.initialLoading && status.value === "connecting") {
         status.value = readOnly.value ? "readonly" : "ready";
+        syncService.pushEnabled = !readOnly.value;
       }
 
       if (Object.prototype.hasOwnProperty.call(state, "dirty") && state.dirty) {
@@ -127,7 +173,17 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
       }
 
       if (type === ERROR_TYPE.SAVE_COLLISION) {
-        conflictContent.value = (data as { outsideChange?: string })?.outsideChange ?? null;
+        const outsideChange = (data as { outsideChange?: string })?.outsideChange;
+
+        if (outsideChange) {
+          conflictContent.value = outsideChange;
+
+          if (!dirty.value) {
+            void reconcileOutsideChange(outsideChange);
+          }
+        } else {
+          conflictContent.value = null;
+        }
       }
 
       if (type === ERROR_TYPE.CONNECTION_FAILED || type === ERROR_TYPE.SOURCE_NOT_FOUND) {
@@ -146,6 +202,10 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
   }
 
   function scheduleAutosave() {
+    if (status.value !== "ready" || conflictContent.value) {
+      return;
+    }
+
     if (autosaveTimer) {
       clearTimeout(autosaveTimer);
     }
@@ -153,6 +213,15 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
     autosaveTimer = setTimeout(() => {
       void save(false).catch(() => {});
     }, 2000);
+  }
+
+  function scheduleSave() {
+    if (!connection.value || readOnly.value || !callbacks || status.value !== "ready") {
+      return;
+    }
+
+    dirty.value = true;
+    scheduleAutosave();
   }
 
   async function save(manualSave = true): Promise<void> {
@@ -164,6 +233,7 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
 
     try {
       await syncService.sendRemainingSteps();
+
       const result = await api.save(connection.value, {
         version: syncService.version,
         autosaveContent: callbacks.serialize(),
@@ -237,6 +307,7 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
     documentInfo: computed(() => openData?.document ?? null),
     connect,
     save,
+    scheduleSave,
     close,
   };
 }

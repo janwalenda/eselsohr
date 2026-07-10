@@ -440,7 +440,6 @@ onBeforeUnmount(() => {
       <Button
         v-if="pendingLoginUrl"
         class="w-full"
-        variant="outline"
         :disabled="polling"
         @click="openPendingLoginUrl"
       >
@@ -463,7 +462,7 @@ onBeforeUnmount(() => {
     >
       {{ errorMessage }}
       <div v-if="loginMode === 'flow'" class="mt-3">
-        <Button variant="outline" size="sm" @click="showManualFallback()">
+        <Button size="sm" @click="showManualFallback()">
           Stattdessen App-Passwort verwenden
         </Button>
       </div>

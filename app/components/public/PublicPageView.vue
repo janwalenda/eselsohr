@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import markdownIt from "@/lib/nc-text/editor/markdownit";
+import { parseMarkdownFile } from "~~/shared/frontmatter";
 
 const props = defineProps<{
   content: string;
 }>();
 
-const renderedHtml = computed(() => markdownIt.render(props.content || ""));
+const renderedHtml = computed(() => markdownIt.render(parseMarkdownFile(props.content || "").body));
 </script>
 
 <template>

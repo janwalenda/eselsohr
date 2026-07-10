@@ -1,4 +1,5 @@
 import type { CollectivePageNode } from "~~/shared/collectives";
+import { callWithNuxt } from "#app";
 import { flattenPageTree } from "./useCollectivePages";
 import { isLandingPage } from "~~/shared/collectives";
 
@@ -16,6 +17,8 @@ export async function navigateToCollective(
   collectiveId: number,
   options: { replace?: boolean } = {},
 ) {
+  const nuxtApp = useNuxtApp();
+
   const apiFetch = useApiFetch();
 
   const navigationOptions = options.replace ? { replace: true as const } : undefined;
@@ -30,11 +33,13 @@ export async function navigateToCollective(
     const firstPage = landingPage ?? flattenPageTree(response.pages)[0];
 
     if (firstPage) {
-      return navigateTo(`/app/${collectiveId}/${firstPage.id}`, navigationOptions);
+      return callWithNuxt(nuxtApp, () =>
+        navigateTo(`/app/${collectiveId}/${firstPage.id}`, navigationOptions),
+      );
     }
   } catch {
     // Fall through to collective index (empty state / error UI).
   }
 
-  return navigateTo(`/app/${collectiveId}`, navigationOptions);
+  return callWithNuxt(nuxtApp, () => navigateTo(`/app/${collectiveId}`, navigationOptions));
 }

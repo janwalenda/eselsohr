@@ -1,4 +1,5 @@
 import type { H3Event } from "h3";
+import { parseMarkdownFile } from "../../../../../../../shared/frontmatter";
 import { getPage } from "../../../../../../utils/nc-collectives";
 import { createTextSession } from "../../../../../../utils/nc-text";
 import { getPageDavRelativePath, getPageFileId } from "../../../../../../utils/nc-webdav";
@@ -32,5 +33,13 @@ export default defineEventHandler(async (event) => {
     filePath,
   });
 
-  return { ...openData, filePath };
+  const parsedContent =
+    typeof openData.content === "string" ? parseMarkdownFile(openData.content) : null;
+
+  return {
+    ...openData,
+    filePath,
+    properties: parsedContent?.properties ?? {},
+    content: parsedContent?.body ?? openData.content ?? null,
+  };
 });
