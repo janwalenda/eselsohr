@@ -100,7 +100,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-[700px] px-0 py-2 focus:outline-none w-full",
+        "prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-full px-0 py-2 focus:outline-none w-full",
     },
     handleClick(_view, _pos, event) {
       if (event.button !== 0) {
@@ -898,7 +898,7 @@ defineExpose({
     <div v-if="viewMode === 'source'" class="h-full flex justify-center">
       <div
         ref="sourceEditorRef"
-        class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-[700px]"
+        class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-full"
         role="textbox"
         aria-multiline="true"
         :contenteditable="toolbarDisabled ? 'false' : 'plaintext-only'"
