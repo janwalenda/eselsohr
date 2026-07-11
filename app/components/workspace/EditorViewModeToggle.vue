@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { BookOpenIcon, Code2Icon, PencilIcon } from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 
 export type ViewMode = "reading" | "editing" | "source";

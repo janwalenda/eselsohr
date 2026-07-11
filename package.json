@@ -6,7 +6,7 @@
     "build": "nuxt build --preset netlify",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:reindex-tags": "node scripts/reindex-page-tags.mjs",
-    "prebuild": "npm run lint && npm run format",
+    "prebuild": "npm run lint && npm run format:check && npm run test",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
