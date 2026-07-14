@@ -64,3 +64,10 @@ export function resolveCreateParentId(
 ): number {
   return page.id;
 }
+
+/** Parent ID for creating a sibling page next to `page` (same folder in the tree). */
+export function resolveSiblingCreateParentId(
+  page: Pick<CollectivePage, "id" | "parentId">,
+): number {
+  return page.parentId === 0 ? page.id : page.parentId;
+}

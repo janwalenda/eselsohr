@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { getPageBreadcrumb } from "@/composables/useCollectivePages";
-import { isLandingPage } from "~~/shared/collectives";
+import { isLandingPage, resolveSiblingCreateParentId } from "~~/shared/collectives";
+import { toast } from "vue-sonner";
 import PageActions from "@/components/workspace/PageActions.vue";
 import PageBreadcrumb from "@/components/workspace/PageBreadcrumb.vue";
 import PagePropertiesPanel from "@/components/workspace/PagePropertiesPanel.vue";
@@ -102,6 +103,10 @@ async function reloadEditor() {
   editorKey.value += 1;
 }
 
+function toMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unbekannter Fehler";
+}
+
 async function handleWikiLinkClick(payload: { target: string; resolvedPageId: number | null }) {
   if (payload.resolvedPageId) {
     await navigateTo(`/app/${props.collectiveId}/${payload.resolvedPageId}`);
@@ -114,12 +119,16 @@ async function handleWikiLinkClick(payload: { target: string; resolvedPageId: nu
     return;
   }
 
-  const page = await createPage({
-    title: payload.target,
-    parentId: currentPage.parentId,
-  });
+  try {
+    const page = await createPage({
+      title: payload.target,
+      parentId: resolveSiblingCreateParentId(currentPage),
+    });
 
-  await navigateTo(`/app/${props.collectiveId}/${page.id}`);
+    await navigateTo(`/app/${props.collectiveId}/${page.id}`);
+  } catch (error) {
+    toast.error(toMessage(error));
+  }
 }
 </script>
 
