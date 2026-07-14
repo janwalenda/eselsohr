@@ -28,6 +28,7 @@ function toSuggestionListProps(
 ) {
   return {
     items: props.items,
+    query: props.query ?? "",
     command: props.command,
   };
 }

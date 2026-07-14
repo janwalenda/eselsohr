@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor } from "@tiptap/vue-3";
 import {
   AlertCircleIcon,
@@ -565,6 +566,49 @@ function toggleBold() {
   editor.value?.chain().focus().toggleBold().run();
 }
 
+function addWikiLink() {
+  if (isSourceMode.value) {
+    applySourceEdit((textarea) => wrapSelection(textarea, "[[", "]]"));
+    return;
+  }
+
+  const ed = editor.value;
+
+  if (!ed) {
+    return;
+  }
+
+  const { from, to, empty } = ed.state.selection;
+
+  if (!empty) {
+    const selected = ed.state.doc.textBetween(from, to, "").trim();
+
+    if (selected) {
+      ed.chain()
+        .focus()
+        .insertContentAt(
+          { from, to },
+          {
+            type: "wikiLink",
+            attrs: { target: selected, label: null },
+          },
+        )
+        .run();
+      return;
+    }
+  }
+
+  ed.chain()
+    .focus()
+    .command(({ tr, dispatch }) => {
+      tr.insertText("[[", from);
+      tr.setSelection(TextSelection.create(tr.doc, from + 2));
+      dispatch?.(tr);
+      return true;
+    })
+    .run();
+}
+
 function toggleItalic() {
   if (isSourceMode.value) {
     applySourceEdit((textarea) => wrapSelection(textarea, "*"));
@@ -805,7 +849,9 @@ defineExpose({
         >
           <BoldIcon class="size-4" />
         </Button>
-
+        <Button variant="ghost" size="icon" :disabled="toolbarDisabled" @click="addWikiLink">
+          <span class="text-xs font-mono size-4">[]</span>
+        </Button>
         <Button
           variant="ghost"
           size="icon"

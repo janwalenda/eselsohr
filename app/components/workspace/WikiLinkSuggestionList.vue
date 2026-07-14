@@ -8,6 +8,7 @@ defineOptions({
 
 const props = defineProps<{
   items: WikiLinkSuggestionItem[];
+  query: string;
   command: (item: WikiLinkSuggestionItem) => void;
 }>();
 
@@ -31,6 +32,22 @@ function selectItem(index: number) {
 }
 
 function onKeyDown(event: KeyboardEvent) {
+  if (event.key === "Enter") {
+    const target = props.query.trim();
+
+    if (props.items.length === 0) {
+      if (!target) {
+        return false;
+      }
+
+      props.command({ id: -1, title: target });
+      return true;
+    }
+
+    selectItem(selectedIndex.value);
+    return true;
+  }
+
   if (props.items.length === 0) {
     return false;
   }
@@ -42,11 +59,6 @@ function onKeyDown(event: KeyboardEvent) {
 
   if (event.key === "ArrowDown") {
     selectedIndex.value = (selectedIndex.value + 1) % props.items.length;
-    return true;
-  }
-
-  if (event.key === "Enter") {
-    selectItem(selectedIndex.value);
     return true;
   }
 
@@ -72,8 +84,11 @@ defineExpose({ onKeyDown });
       {{ item.title }}
     </button>
 
-    <p v-if="items.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
-      Keine Seiten gefunden
+    <p v-if="items.length === 0 && query.trim()" class="px-2 py-1.5 text-sm text-muted-foreground">
+      Keine Seiten gefunden — Enter für neuen Link
+    </p>
+    <p v-else-if="items.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
+      Seitentitel eingeben…
     </p>
   </div>
 </template>
