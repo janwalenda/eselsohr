@@ -50,17 +50,23 @@ import { shouldApplySourceMarkdownOnModeSwitch } from "@/lib/nc-text/editor/sour
 import { useTextSession } from "@/composables/useTextSession";
 import { composeMarkdownFile, parseMarkdownFile } from "~~/shared/frontmatter";
 import type { PageProperties } from "~~/shared/properties";
+import type { CollectivePage } from "~~/shared/collectives";
+import { resolveWikiLinkTarget } from "~~/shared/wiki-links";
+import { createWikiLinkSuggestionRender } from "@/lib/nc-text/editor/wiki-link-suggestion-render";
+import WikiLinkSuggestionList from "@/components/workspace/WikiLinkSuggestionList.vue";
 
 const props = defineProps<{
   collectiveId: number;
   pageId: number;
   userName: string;
   properties: PageProperties;
+  pages?: Pick<CollectivePage, "id" | "title">[];
 }>();
 
 const emit = defineEmits<{
   reload: [];
   "update:properties": [properties: PageProperties];
+  wikiLinkClick: [payload: { target: string; resolvedPageId: number | null }];
 }>();
 
 function colorForName(name: string) {
@@ -90,13 +96,56 @@ const sourceEditorRef = ref<HTMLDivElement | null>(null);
 
 const sourceRemoteStale = ref(false);
 
-const editor = useEditor({
-  extensions: buildExtensions({
+const wikiLinkSuggestionRender = createWikiLinkSuggestionRender(WikiLinkSuggestionList);
+
+function buildEditorExtensions() {
+  return buildExtensions({
     document: session.ydoc,
     awareness: session.awareness,
     collectiveId: props.collectiveId,
     pageId: props.pageId,
-  }),
+    pages: props.pages ?? [],
+    enableWikiLinkSuggestion: true,
+    wikiLinkSuggestion: {
+      render: wikiLinkSuggestionRender,
+    },
+  });
+}
+
+async function handleWikiLinkInteraction(
+  wikiLinkElement: Element,
+  openForReading: boolean,
+  openWithModifier: boolean,
+) {
+  const target = wikiLinkElement.getAttribute("data-wiki-target")?.trim() ?? "";
+
+  if (!target) {
+    return false;
+  }
+
+  const pageIdAttr = wikiLinkElement.getAttribute("data-wiki-page-id");
+
+  const resolvedPageId = pageIdAttr
+    ? Number(pageIdAttr)
+    : (resolveWikiLinkTarget(target, props.pages ?? [])?.id ?? null);
+
+  const isBroken = resolvedPageId === null || !Number.isFinite(resolvedPageId);
+
+  if (isBroken) {
+    emit("wikiLinkClick", { target, resolvedPageId: null });
+    return true;
+  }
+
+  if (openForReading || openWithModifier) {
+    emit("wikiLinkClick", { target, resolvedPageId });
+    return true;
+  }
+
+  return false;
+}
+
+const editor = useEditor({
+  extensions: buildEditorExtensions(),
   editorProps: {
     attributes: {
       class:
@@ -111,6 +160,19 @@ const editor = useEditor({
 
       if (!(target instanceof Element)) {
         return false;
+      }
+
+      const wikiLink = target.closest("[data-wiki-link]");
+
+      if (wikiLink) {
+        event.preventDefault();
+
+        const openForReading = viewMode.value === "reading" || session.readOnly.value;
+
+        const openWithModifier = event.metaKey || event.ctrlKey;
+
+        void handleWikiLinkInteraction(wikiLink, openForReading, openWithModifier);
+        return true;
       }
 
       const link = target.closest("a[href]");
@@ -141,6 +203,38 @@ watch(
     editor.value?.setEditable(editable);
   },
   { immediate: true },
+);
+
+watch(
+  () => props.pages,
+  (pages) => {
+    const wikiLinkExtension = editor.value?.extensionManager.extensions.find(
+      (extension) => extension.name === "wikiLink",
+    );
+
+    if (wikiLinkExtension) {
+      wikiLinkExtension.options.pages = pages;
+    }
+
+    if (!editor.value) {
+      return;
+    }
+
+    const { state } = editor.value;
+
+    let transaction = state.tr;
+
+    state.doc.descendants((node, pos) => {
+      if (node.type.name === "wikiLink") {
+        transaction = transaction.setNodeMarkup(pos, undefined, node.attrs);
+      }
+    });
+
+    if (transaction.docChanged) {
+      editor.value.view.dispatch(transaction);
+    }
+  },
+  { deep: true },
 );
 
 function markDirty() {
@@ -441,7 +535,10 @@ function switchViewMode(next: ViewMode) {
   if (previous === "source" && next !== "source") {
     const parsed = parseMarkdownFile(sourceMarkdown.value);
 
-    emit("update:properties", parsed.properties);
+    const nextProperties =
+      Object.keys(parsed.properties).length > 0 ? parsed.properties : props.properties;
+
+    emit("update:properties", nextProperties);
 
     if (shouldApplySourceMarkdownOnModeSwitch(sourceRemoteStale.value)) {
       applyMarkdownToYdoc(session.ydoc, parsed.body);
@@ -630,11 +727,14 @@ function serializeContent() {
 function applyOutsideChange(fullMarkdown: string) {
   const parsed = parseMarkdownFile(fullMarkdown);
 
-  emit("update:properties", parsed.properties);
+  const nextProperties =
+    Object.keys(parsed.properties).length > 0 ? parsed.properties : props.properties;
+
+  emit("update:properties", nextProperties);
   applyMarkdownToYdoc(session.ydoc, parsed.body);
 
   if (viewMode.value === "source") {
-    sourceMarkdown.value = fullMarkdown;
+    sourceMarkdown.value = composeMarkdownFile(nextProperties, parsed.body);
     void nextTick(() => syncEditorFromMarkdown());
   }
 }

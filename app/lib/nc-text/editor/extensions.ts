@@ -15,8 +15,11 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import type { Doc } from "yjs";
 import type { Awareness } from "y-protocols/awareness";
+import type { CollectivePage } from "~~/shared/collectives";
+import type { SuggestionOptions } from "@tiptap/suggestion";
 import { Callout } from "./Callout";
 import { ResolvedImage } from "./ResolvedImage";
+import { WikiLink, type WikiLinkSuggestionItem } from "./WikiLink";
 
 type AnyExtension = Extension | TiptapNode | Mark;
 
@@ -30,10 +33,26 @@ export interface BuildExtensionsOptions {
   /** Collective/page ids used to resolve attachment image paths for display. */
   collectiveId?: number;
   pageId?: number;
+  /** Pages available for wiki-link resolution and autocomplete. */
+  pages?: Pick<CollectivePage, "id" | "title">[];
+  /** Enables the `[[` autocomplete popup in the editor. */
+  enableWikiLinkSuggestion?: boolean;
+  wikiLinkSuggestion?: Partial<
+    Omit<SuggestionOptions<WikiLinkSuggestionItem, WikiLinkSuggestionItem>, "editor">
+  >;
 }
 
 export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtension[] {
-  const { editing = true, document, awareness, collectiveId = 0, pageId = 0 } = options;
+  const {
+    editing = true,
+    document,
+    awareness,
+    collectiveId = 0,
+    pageId = 0,
+    pages = [],
+    enableWikiLinkSuggestion = false,
+    wikiLinkSuggestion,
+  } = options;
 
   const extensions: AnyExtension[] = [
     // Undo/redo is handled by the Collaboration extension, so disable the
@@ -54,6 +73,12 @@ export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtens
     TaskItem.configure({ nested: true }),
     ResolvedImage.configure({ collectiveId, pageId }),
     Callout,
+    WikiLink.configure({
+      collectiveId,
+      pages,
+      enableSuggestion: editing && enableWikiLinkSuggestion,
+      suggestion: wikiLinkSuggestion ?? {},
+    }),
   ];
 
   if (document) {

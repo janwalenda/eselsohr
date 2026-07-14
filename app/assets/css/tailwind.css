@@ -69,3 +69,18 @@
     width: var(--sidebar-width-icon);
   }
 }
+
+.prose .wiki-link,
+.prose a.wiki-link {
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose .wiki-link--broken,
+.prose a.wiki-link--broken {
+  color: var(--color-muted-foreground);
+  text-decoration-style: dashed;
+}

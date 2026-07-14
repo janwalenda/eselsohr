@@ -17,7 +17,12 @@ const { session } = useNcSession();
 
 const { collectives } = useCollectives();
 
-const { pages, flatPages, error: pagesError } = useCollectivePages(() => props.collectiveId);
+const {
+  pages,
+  flatPages,
+  error: pagesError,
+  createPage,
+} = useCollectivePages(() => props.collectiveId);
 
 const pageState = usePage(
   () => props.collectiveId,
@@ -26,12 +31,14 @@ const pageState = usePage(
 
 await pageState;
 
+const { properties, setProperties } = pageState;
+
 const pageKey = computed(() => `${props.collectiveId}:${props.pageId}`);
 
 const editorRef = ref<InstanceType<typeof TextCollaborativeEditor> | null>(null);
 
 const { definitions, addProperty, updateProperty, removeProperty } = usePageProperties(
-  pageState,
+  { properties, setProperties },
   pageKey,
   {
     onCommit: () => editorRef.value?.scheduleSave(),
@@ -94,6 +101,26 @@ async function reloadEditor() {
   await pageState.reload();
   editorKey.value += 1;
 }
+
+async function handleWikiLinkClick(payload: { target: string; resolvedPageId: number | null }) {
+  if (payload.resolvedPageId) {
+    await navigateTo(`/app/${props.collectiveId}/${payload.resolvedPageId}`);
+    return;
+  }
+
+  const currentPage = flatPages.value.find((page) => page.id === props.pageId);
+
+  if (!currentPage) {
+    return;
+  }
+
+  const page = await createPage({
+    title: payload.target,
+    parentId: currentPage.parentId,
+  });
+
+  await navigateTo(`/app/${props.collectiveId}/${page.id}`);
+}
 </script>
 
 <template>
@@ -139,8 +166,10 @@ async function reloadEditor() {
             :collective-id="collectiveId"
             :page-id="pageId"
             :user-name="userName"
-            :properties="pageState.properties.value"
-            @update:properties="pageState.setProperties"
+            :properties="properties"
+            :pages="flatPages"
+            @wiki-link-click="handleWikiLinkClick"
+            @update:properties="setProperties"
             @reload="reloadEditor"
           />
           <template #fallback>
