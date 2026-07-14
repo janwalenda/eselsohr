@@ -70,7 +70,7 @@ defineExpose({ onKeyDown });
 
 <template>
   <div
-    class="max-h-64 min-w-48 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+    class="max-h-64 min-w-48 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md bg-white/60 backdrop-blur-sm"
   >
     <button
       v-for="(item, index) in items"
