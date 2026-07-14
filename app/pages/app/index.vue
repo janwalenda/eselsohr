@@ -29,7 +29,7 @@ const { collectives, pending, error } = useCollectives();
           {{ error.message }}
         </Card>
 
-        <div v-else-if="collectives.length > 0" class="grid gap-3 bg-green">
+        <div v-else-if="collectives.length > 0" class="grid gap-3">
           <NuxtLink
             v-for="collective in collectives"
             :key="collective.id"

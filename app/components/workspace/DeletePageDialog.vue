@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     open: boolean;
     title?: string;
@@ -35,17 +35,17 @@ function handleSubmit() {
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="emit('update:open', $event)">
+  <Dialog :open="props.open" @update:open="emit('update:open', $event)">
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Seite löschen</DialogTitle>
         <DialogDescription>
-          „{{ title }}“ wird in den Nextcloud-Papierkorb verschoben.
+          „{{ props.title }}“ wird in den Nextcloud-Papierkorb verschoben.
         </DialogDescription>
       </DialogHeader>
 
       <DialogFooter>
-        <Button variant="outline" @click="close"> Abbrechen </Button>
+        <Button @click="close"> Abbrechen </Button>
         <Button variant="destructive" @click="handleSubmit"> Löschen </Button>
       </DialogFooter>
     </DialogContent>

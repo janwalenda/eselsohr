@@ -17,6 +17,8 @@ import { decodeArrayBuffer, encodeArrayBuffer } from "./base64";
 import { logger } from "./logger";
 import { messageAwareness, messageSync, readMessage } from "./protocol";
 import type SyncService from "./SyncService";
+import { APPLY_MARKDOWN_ORIGIN } from "./editor/apply-markdown";
+import { SEED_ORIGIN } from "./editor/seed";
 import { stepsFromOpenData } from "./yjs";
 import type { OpenData, Step } from "./types";
 
@@ -61,7 +63,7 @@ export class HttpProvider {
     syncService.bus.on("sync", this.#onSync);
 
     this.#updateHandler = (_update, origin) => {
-      if (origin === this) {
+      if (origin === this || origin === SEED_ORIGIN || origin === APPLY_MARKDOWN_ORIGIN) {
         return;
       }
 

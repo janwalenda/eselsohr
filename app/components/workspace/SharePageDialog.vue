@@ -124,9 +124,7 @@ async function handleDelete(token: string) {
             <p class="mt-1 text-xs text-muted-foreground">Token: {{ share.token }}</p>
 
             <div class="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" @click="handleCopy(share.url)">
-                Link kopieren
-              </Button>
+              <Button size="sm" @click="handleCopy(share.url)"> Link kopieren </Button>
               <Button
                 size="sm"
                 variant="destructive"
@@ -141,7 +139,7 @@ async function handleDelete(token: string) {
       </div>
 
       <DialogFooter>
-        <Button variant="outline" @click="close"> Schließen </Button>
+        <Button @click="close"> Schließen </Button>
         <Button :disabled="creating" @click="handleCreate">
           {{ creating ? "Erstelle…" : "Öffentlichen Link erstellen" }}
         </Button>

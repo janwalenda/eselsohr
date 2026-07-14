@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DialogRootEmits, DialogRootProps } from "reka-ui";
+import { reactiveOmit } from "@vueuse/core";
 import { useForwardPropsEmits } from "reka-ui";
 import {
   Dialog,
@@ -15,17 +16,21 @@ const props = withDefaults(
     DialogRootProps & {
       title?: string;
       description?: string;
+      filterDisabled?: boolean;
     }
   >(),
   {
     title: "Command Palette",
     description: "Search for a command to run...",
+    filterDisabled: false,
   },
 );
 
 const emits = defineEmits<DialogRootEmits>();
 
-const forwarded = useForwardPropsEmits(props, emits);
+const delegatedProps = reactiveOmit(props, "title", "description", "filterDisabled");
+
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
@@ -35,7 +40,7 @@ const forwarded = useForwardPropsEmits(props, emits);
         <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>{{ description }}</DialogDescription>
       </DialogHeader>
-      <Command>
+      <Command :filter-disabled="props.filterDisabled">
         <slot v-bind="slotProps" />
       </Command>
     </DialogContent>

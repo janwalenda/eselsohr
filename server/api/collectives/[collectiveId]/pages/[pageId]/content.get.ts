@@ -3,6 +3,7 @@ import {
   buildAttachmentProxyBase,
   rewriteCollectiveAttachmentsForDisplay,
 } from "../../../../../../shared/collective-attachments";
+import { parseMarkdownFile } from "../../../../../../shared/frontmatter";
 import { getPage } from "../../../../../utils/nc-collectives";
 import { readPageContent } from "../../../../../utils/nc-webdav";
 
@@ -23,13 +24,16 @@ export default defineEventHandler(async (event) => {
 
   const page = await getPage(event, collectiveId, pageId);
 
-  const content = await readPageContent(event, page);
+  const rawContent = await readPageContent(event, page);
+
+  const parsed = parseMarkdownFile(rawContent.content);
 
   const proxyBase = buildAttachmentProxyBase(collectiveId, pageId);
 
   return {
     page,
-    content: rewriteCollectiveAttachmentsForDisplay(content.content, proxyBase),
-    etag: content.etag,
+    properties: parsed.properties,
+    content: rewriteCollectiveAttachmentsForDisplay(parsed.body, proxyBase),
+    etag: rawContent.etag,
   };
 });

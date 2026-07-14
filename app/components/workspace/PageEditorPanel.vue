@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { getPageBreadcrumb } from "@/composables/useCollectivePages";
 import { isLandingPage } from "~~/shared/collectives";
 import PageActions from "@/components/workspace/PageActions.vue";
 import PageBreadcrumb from "@/components/workspace/PageBreadcrumb.vue";
+import PagePropertiesPanel from "@/components/workspace/PagePropertiesPanel.vue";
 import TextCollaborativeEditor from "@/components/workspace/TextCollaborativeEditor.vue";
+import { usePageProperties } from "@/composables/usePageProperties";
 
 const props = defineProps<{
   collectiveId: number;
@@ -23,6 +25,36 @@ const pageState = usePage(
 );
 
 await pageState;
+
+const pageKey = computed(() => `${props.collectiveId}:${props.pageId}`);
+
+const editorRef = ref<InstanceType<typeof TextCollaborativeEditor> | null>(null);
+
+const { definitions, addProperty, updateProperty, removeProperty } = usePageProperties(
+  pageState,
+  pageKey,
+  {
+    onCommit: () => editorRef.value?.scheduleSave(),
+  },
+);
+
+const apiFetch = useApiFetch();
+
+const knownTags = ref<string[]>([]);
+
+watch(
+  () => [props.collectiveId, props.pageId],
+  async () => {
+    try {
+      const response = await apiFetch<{ tags: string[] }>("/api/search/tags");
+
+      knownTags.value = response.tags;
+    } catch {
+      knownTags.value = [];
+    }
+  },
+  { immediate: true },
+);
 
 const pagePayload = computed(() => pageState.data.value);
 
@@ -92,12 +124,23 @@ async function reloadEditor() {
           <PageActions :collective-id="collectiveId" :page="displayPage" :flat-pages="flatPages" />
         </div>
 
+        <PagePropertiesPanel
+          :definitions="definitions"
+          :known-tags="knownTags"
+          @add="addProperty()"
+          @update="(index, patch) => updateProperty(index, patch)"
+          @remove="(index) => removeProperty(index)"
+        />
+
         <ClientOnly>
           <TextCollaborativeEditor
+            ref="editorRef"
             :key="editorKey"
             :collective-id="collectiveId"
             :page-id="pageId"
             :user-name="userName"
+            :properties="pageState.properties.value"
+            @update:properties="pageState.setProperties"
             @reload="reloadEditor"
           />
           <template #fallback>

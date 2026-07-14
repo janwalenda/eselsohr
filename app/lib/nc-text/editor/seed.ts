@@ -10,14 +10,20 @@
 
 import { prosemirrorToYXmlFragment } from "y-prosemirror";
 import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from "yjs";
+import { parseMarkdownFile } from "~~/shared/frontmatter";
 import { markdownToProseMirrorNode } from "./apply-markdown";
 
+/** Yjs transaction origin for the one-time initial markdown seed (not a user edit). */
+export const SEED_ORIGIN = "seed-initial-content";
+
 export function seedInitialContent(ydoc: Doc, content: string) {
-  if (!content?.trim()) {
+  const body = parseMarkdownFile(content).body;
+
+  if (!body?.trim()) {
     return;
   }
 
-  const node = markdownToProseMirrorNode(content);
+  const node = markdownToProseMirrorNode(body);
 
   const baseDoc = new Doc();
 
@@ -31,5 +37,5 @@ export function seedInitialContent(ydoc: Doc, content: string) {
 
   prosemirrorToYXmlFragment(node, fragment);
 
-  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc));
+  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc), SEED_ORIGIN);
 }

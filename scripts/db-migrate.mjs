@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 import { neon } from "@neondatabase/serverless";
@@ -54,12 +54,6 @@ function getDatabaseUrl() {
   return url.toString();
 }
 
-const sql = neon(getDatabaseUrl());
-
-const migrationFile = resolve(workspaceRoot, "db", "migrations", "001_public_shares.sql");
-
-const migrationSql = await readFile(migrationFile, "utf8");
-
 function splitSqlStatements(source) {
   return source
     .split(/;\s*(?:\r?\n|$)/)
@@ -67,8 +61,20 @@ function splitSqlStatements(source) {
     .filter(Boolean);
 }
 
-for (const statement of splitSqlStatements(migrationSql)) {
-  await sql.query(statement);
-}
+const sql = neon(getDatabaseUrl());
 
-console.log(`Applied migration: ${migrationFile}`);
+const migrationsDir = resolve(workspaceRoot, "db", "migrations");
+
+const migrationFiles = (await readdir(migrationsDir))
+  .filter((fileName) => fileName.endsWith(".sql"))
+  .sort();
+
+for (const migrationFile of migrationFiles) {
+  const migrationSql = await readFile(resolve(migrationsDir, migrationFile), "utf8");
+
+  for (const statement of splitSqlStatements(migrationSql)) {
+    await sql.query(statement);
+  }
+
+  console.log(`Applied migration: ${migrationFile}`);
+}

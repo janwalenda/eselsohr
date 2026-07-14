@@ -3,7 +3,10 @@ import {
   buildAttachmentProxyBase,
   rewriteCollectiveAttachmentsForStorage,
 } from "../../../../../../shared/collective-attachments";
+import { composeMarkdownFile, parseMarkdownFile } from "../../../../../../shared/frontmatter";
+import type { PageProperties } from "../../../../../../shared/properties";
 import { getPage } from "../../../../../utils/nc-collectives";
+import { indexPageTagsFromMarkdown } from "../../../../../utils/page-tags-index";
 import { writePageContent } from "../../../../../utils/nc-webdav";
 
 function getNumericRouteParam(event: H3Event, key: string) {
@@ -21,7 +24,11 @@ export default defineEventHandler(async (event) => {
 
   const pageId = getNumericRouteParam(event, "pageId");
 
-  const body = await readBody<{ content?: string; etag?: string | null }>(event);
+  const body = await readBody<{
+    content?: string;
+    properties?: PageProperties;
+    etag?: string | null;
+  }>(event);
 
   if (typeof body.content !== "string") {
     throw createError({ statusCode: 400, statusMessage: "Markdown content is required" });
@@ -31,9 +38,20 @@ export default defineEventHandler(async (event) => {
 
   const proxyBase = buildAttachmentProxyBase(collectiveId, pageId);
 
-  const markdown = rewriteCollectiveAttachmentsForStorage(body.content, proxyBase);
+  const parsed = parseMarkdownFile(body.content);
+
+  const properties = body.properties ?? parsed.properties;
+
+  const markdownBody = rewriteCollectiveAttachmentsForStorage(
+    body.properties ? body.content : parsed.body,
+    proxyBase,
+  );
+
+  const markdown = composeMarkdownFile(properties, markdownBody);
 
   const result = await writePageContent(event, page, markdown, body.etag ?? null);
+
+  await indexPageTagsFromMarkdown(event, collectiveId, pageId, markdown);
 
   return {
     page,

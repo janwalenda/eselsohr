@@ -1,17 +1,10 @@
-import type {
-  CollectivePage,
-  CollectivePageNode,
-  CreatePageInput,
-  UpdatePageInput,
-} from "~~/shared/collectives";
+import { flattenPageTree, isLandingPage } from "~~/shared/collectives";
+import type { CollectivePageNode, CreatePageInput, UpdatePageInput } from "~~/shared/collectives";
 import type { MaybeRefOrGetter } from "vue";
 import { computed, toValue } from "vue";
 import { isCollectivesWriteAuthError } from "~~/shared/api-errors";
-import { isLandingPage } from "~~/shared/collectives";
 
-export function flattenPageTree(nodes: CollectivePageNode[]): CollectivePage[] {
-  return nodes.flatMap((node) => [node, ...flattenPageTree(node.children)]);
-}
+export { flattenPageTree };
 
 export function findPageInTree(
   nodes: CollectivePageNode[],

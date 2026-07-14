@@ -1,4 +1,5 @@
 import type { H3Event } from "h3";
+import { parseMarkdownFile } from "../../../../../../../shared/frontmatter";
 import {
   buildPublicAttachmentProxyBase,
   rewriteCollectiveAttachmentsForDisplay,
@@ -35,12 +36,13 @@ export default defineEventHandler(async (event) => {
   const content = await withPublicShareCleanup(event, token, async () =>
     readPublicPageContent(share.ncUrl, token, page),
   );
+  const parsed = parseMarkdownFile(content.content);
 
   return {
     share,
     page,
     content: rewriteCollectiveAttachmentsForDisplay(
-      content.content,
+      parsed.body,
       buildPublicAttachmentProxyBase(token, pageId),
     ),
     etag: content.etag,

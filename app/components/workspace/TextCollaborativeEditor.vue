@@ -2,7 +2,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { EditorContent, useEditor } from "@tiptap/vue-3";
 import {
+  AlertCircleIcon,
   BoldIcon,
+  CircleCheckIcon,
+  CircleDotIcon,
   Code2Icon,
   Heading1Icon,
   Heading2Icon,
@@ -13,15 +16,20 @@ import {
   ListChecksIcon,
   ListIcon,
   ListOrderedIcon,
+  Loader2Icon,
+  LockIcon,
   QuoteIcon,
   RedoIcon,
   StrikethroughIcon,
   TableIcon,
   UndoIcon,
+  WifiOffIcon,
 } from "lucide-vue-next";
+import type { Component } from "vue";
 import EditorViewModeToggle, {
   type ViewMode,
 } from "@/components/workspace/EditorViewModeToggle.vue";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildExtensions } from "@/lib/nc-text/editor/extensions";
 import { APPLY_MARKDOWN_ORIGIN, applyMarkdownToYdoc } from "@/lib/nc-text/editor/apply-markdown";
 import {
@@ -40,15 +48,19 @@ import { serializeMarkdown } from "@/lib/nc-text/editor/markdown-serializer";
 import { seedInitialContent } from "@/lib/nc-text/editor/seed";
 import { shouldApplySourceMarkdownOnModeSwitch } from "@/lib/nc-text/editor/source-mode";
 import { useTextSession } from "@/composables/useTextSession";
+import { composeMarkdownFile, parseMarkdownFile } from "~~/shared/frontmatter";
+import type { PageProperties } from "~~/shared/properties";
 
 const props = defineProps<{
   collectiveId: number;
   pageId: number;
   userName: string;
+  properties: PageProperties;
 }>();
 
 const emit = defineEmits<{
   reload: [];
+  "update:properties": [properties: PageProperties];
 }>();
 
 function colorForName(name: string) {
@@ -88,7 +100,7 @@ const editor = useEditor({
   editorProps: {
     attributes: {
       class:
-        "prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-[700px] px-0 py-2 focus:outline-none w-full",
+        "prose prose-table:block prose-table:overflow-x-auto min-h-[60vh] max-w-full px-0 py-2 focus:outline-none w-full",
     },
     handleClick(_view, _pos, event) {
       if (event.button !== 0) {
@@ -131,6 +143,25 @@ watch(
   { immediate: true },
 );
 
+function markDirty() {
+  session.scheduleSave();
+}
+
+watch(
+  () => props.properties,
+  () => {
+    if (viewMode.value !== "source") {
+      return;
+    }
+
+    const parsed = parseMarkdownFile(sourceMarkdown.value);
+
+    sourceMarkdown.value = composeMarkdownFile(props.properties, parsed.body);
+    void nextTick(() => syncEditorFromMarkdown());
+  },
+  { deep: true },
+);
+
 const lastCollaborator = computed(() => {
   const latestSession = session.collaborators.value.reduce(
     (latest, current) => {
@@ -142,32 +173,82 @@ const lastCollaborator = computed(() => {
   return latestSession?.displayName || latestSession?.guestName || latestSession?.userId || "";
 });
 
-const statusLabel = computed(() => {
+type EditorStatus = {
+  label: string;
+  icon: Component;
+  tone: "default" | "success" | "warning" | "error";
+  spin?: boolean;
+};
+
+const editorStatus = computed((): EditorStatus => {
   if (session.status.value === "error") {
-    return session.expired.value ? "Sitzung abgelaufen" : "Verbindungsfehler";
+    return {
+      label: session.expired.value ? "Sitzung abgelaufen" : "Verbindungsfehler",
+      icon: AlertCircleIcon,
+      tone: "error",
+    };
   }
 
   if (session.connectionIssue.value) {
-    return "Verbindung unterbrochen …";
+    return {
+      label: "Verbindung unterbrochen …",
+      icon: WifiOffIcon,
+      tone: "warning",
+    };
   }
 
   if (session.saving.value) {
-    return "Speichert …";
+    return {
+      label: "Speichert …",
+      icon: Loader2Icon,
+      tone: "default",
+      spin: true,
+    };
   }
 
   if (session.status.value === "readonly") {
-    return "Schreibgeschützt";
+    return {
+      label: "Schreibgeschützt",
+      icon: LockIcon,
+      tone: "warning",
+    };
   }
 
   if (session.status.value === "connecting") {
-    return "Verbindet …";
+    return {
+      label: "Verbindet …",
+      icon: Loader2Icon,
+      tone: "default",
+      spin: true,
+    };
   }
 
   if (session.dirty.value) {
-    return "Ungespeichert";
+    return {
+      label: "Ungespeichert",
+      icon: CircleDotIcon,
+      tone: "warning",
+    };
   }
 
-  return "Synchronisiert";
+  return {
+    label: "Synchronisiert",
+    icon: CircleCheckIcon,
+    tone: "success",
+  };
+});
+
+const statusIconClass = computed(() => {
+  switch (editorStatus.value.tone) {
+    case "success":
+      return "text-emerald-600 dark:text-emerald-400";
+    case "warning":
+      return "text-amber-600 dark:text-amber-400";
+    case "error":
+      return "text-destructive";
+    default:
+      return "text-muted-foreground";
+  }
 });
 
 const toolbarDisabled = computed(() => session.readOnly.value);
@@ -343,10 +424,6 @@ function applySourceEdit(mutator: (textarea: HTMLTextAreaElement) => void) {
   markDirty();
 }
 
-function markDirty() {
-  session.dirty.value = true;
-}
-
 function onSourceInput() {
   const editorEl = sourceEditor();
 
@@ -362,15 +439,19 @@ function switchViewMode(next: ViewMode) {
   const previous = viewMode.value;
 
   if (previous === "source" && next !== "source") {
+    const parsed = parseMarkdownFile(sourceMarkdown.value);
+
+    emit("update:properties", parsed.properties);
+
     if (shouldApplySourceMarkdownOnModeSwitch(sourceRemoteStale.value)) {
-      applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value);
+      applyMarkdownToYdoc(session.ydoc, parsed.body);
     }
 
     sourceRemoteStale.value = false;
   } else if (previous !== "source" && next === "source") {
-    if (editor.value) {
-      sourceMarkdown.value = serializeMarkdown(editor.value.state.doc);
-    }
+    const body = editor.value ? serializeMarkdown(editor.value.state.doc) : "";
+
+    sourceMarkdown.value = composeMarkdownFile(props.properties, body);
 
     sourceRemoteStale.value = false;
   }
@@ -538,17 +619,31 @@ function insertTableAction() {
 
 function serializeContent() {
   if (viewMode.value === "source") {
-    applyMarkdownToYdoc(session.ydoc, sourceMarkdown.value);
     return sourceMarkdown.value;
   }
 
-  return editor.value ? serializeMarkdown(editor.value.state.doc) : "";
+  const body = editor.value ? serializeMarkdown(editor.value.state.doc) : "";
+
+  return composeMarkdownFile(props.properties, body);
+}
+
+function applyOutsideChange(fullMarkdown: string) {
+  const parsed = parseMarkdownFile(fullMarkdown);
+
+  emit("update:properties", parsed.properties);
+  applyMarkdownToYdoc(session.ydoc, parsed.body);
+
+  if (viewMode.value === "source") {
+    sourceMarkdown.value = fullMarkdown;
+    void nextTick(() => syncEditorFromMarkdown());
+  }
 }
 
 onMounted(() => {
   session.connect({
     serialize: serializeContent,
     seedInitialContent,
+    applyOutsideChange,
   });
   session.ydoc.on("update", (_update, origin) => {
     if (viewMode.value === "source" && origin !== APPLY_MARKDOWN_ORIGIN) {
@@ -588,7 +683,10 @@ onBeforeUnmount(async () => {
   editor.value?.destroy();
 });
 
-defineExpose({ session });
+defineExpose({
+  session,
+  scheduleSave: () => session.scheduleSave(),
+});
 </script>
 
 <template>
@@ -751,7 +849,21 @@ defineExpose({ session });
         <span v-if="lastCollaborator" class="truncate">
           {{ lastCollaborator }}
         </span>
-        <span>{{ statusLabel }}</span>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <span
+              class="inline-flex size-7 items-center justify-center rounded-md"
+              :aria-label="editorStatus.label"
+            >
+              <component
+                :is="editorStatus.icon"
+                class="size-4"
+                :class="[statusIconClass, editorStatus.spin && 'animate-spin']"
+              />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{{ editorStatus.label }}</TooltipContent>
+        </Tooltip>
       </div>
 
       <div class="ml-auto flex items-center gap-3">
@@ -772,7 +884,7 @@ defineExpose({ session });
       class="flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
     >
       <span>Die Seite wurde außerhalb dieser Sitzung geändert.</span>
-      <Button variant="outline" size="sm" @click="emit('reload')"> Neu laden </Button>
+      <Button size="sm" @click="emit('reload')"> Neu laden </Button>
     </div>
 
     <div
@@ -780,13 +892,13 @@ defineExpose({ session });
       class="flex items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
     >
       <span>Die Bearbeitungssitzung ist abgelaufen.</span>
-      <Button variant="outline" size="sm" @click="emit('reload')"> Neu laden </Button>
+      <Button size="sm" @click="emit('reload')"> Neu laden </Button>
     </div>
 
     <div v-if="viewMode === 'source'" class="h-full flex justify-center">
       <div
         ref="sourceEditorRef"
-        class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-[700px]"
+        class="min-h-[60vh] w-full rounded-md bg-transparent font-mono text-sm leading-relaxed whitespace-pre-wrap wrap-break-word focus:outline-none prose max-w-full"
         role="textbox"
         aria-multiline="true"
         :contenteditable="toolbarDisabled ? 'false' : 'plaintext-only'"

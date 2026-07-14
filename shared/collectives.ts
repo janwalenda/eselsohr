@@ -1,3 +1,5 @@
+import type { PageProperties } from "./properties";
+
 export type CollectiveSummary = {
   id: number;
   name: string;
@@ -27,8 +29,13 @@ export type CollectivePageNode = CollectivePage & {
   children: CollectivePageNode[];
 };
 
+export function flattenPageTree(nodes: CollectivePageNode[]): CollectivePage[] {
+  return nodes.flatMap((node) => [node, ...flattenPageTree(node.children ?? [])]);
+}
+
 export type PageContentPayload = {
   page: CollectivePage;
+  properties: PageProperties;
   content: string;
   etag: string | null;
 };

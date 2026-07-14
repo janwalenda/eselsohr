@@ -7,9 +7,13 @@ import { reactive, ref, watch } from "vue";
 import { cn } from "@/lib/utils";
 import { provideCommandContext } from ".";
 
-const props = withDefaults(defineProps<ListboxRootProps & { class?: HTMLAttributes["class"] }>(), {
-  modelValue: "",
-});
+const props = withDefaults(
+  defineProps<ListboxRootProps & { class?: HTMLAttributes["class"]; filterDisabled?: boolean }>(),
+  {
+    modelValue: "",
+    filterDisabled: false,
+  },
+);
 
 const emits = defineEmits<ListboxRootEmits>();
 
@@ -36,6 +40,19 @@ const filterState = reactive({
 });
 
 function filterItems() {
+  if (props.filterDisabled) {
+    filterState.filtered.groups = new Set(allGroups.value.keys());
+    let itemCount = 0;
+
+    for (const [id] of allItems.value) {
+      filterState.filtered.items.set(id, 1);
+      itemCount++;
+    }
+
+    filterState.filtered.count = itemCount;
+    return;
+  }
+
   if (!filterState.search) {
     filterState.filtered.count = allItems.value.size;
     // Do nothing, each item will know to show itself because search is empty
@@ -72,6 +89,21 @@ watch(
   () => {
     filterItems();
   },
+);
+
+watch(
+  () => props.filterDisabled,
+  () => {
+    filterItems();
+  },
+);
+
+watch(
+  [allItems, allGroups],
+  () => {
+    filterItems();
+  },
+  { deep: true },
 );
 
 provideCommandContext({
