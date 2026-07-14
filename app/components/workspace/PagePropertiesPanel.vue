@@ -101,6 +101,23 @@ function updateTagsFromText(index: number, definition: PropertyDefinition, raw: 
 
     <div v-else class="flex flex-col">
       <InputGroup v-for="(definition, index) in definitions" :key="definition.id" class="my-2">
+        <select
+          data-slot="input-group-control"
+          tabindex="0"
+          class="h-9 cursor-pointer border-0 bg-transparent py-1 pr-7 pl-2 text-sm outline-none w-28"
+          :value="definition.type"
+          @change="
+            emit('update', index, {
+              type: ($event.target as HTMLSelectElement).value as PropertyType,
+            })
+          "
+        >
+          <option v-for="option in propertyTypes" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+        <Separator orientation="vertical" />
+
         <InputGroupInput
           :model-value="definition.key"
           placeholder="name"
@@ -109,23 +126,6 @@ function updateTagsFromText(index: number, definition: PropertyDefinition, raw: 
           @update:model-value="emit('update', index, { key: String($event) })"
         />
         <Separator orientation="vertical" />
-
-        <InputGroupAddon class="px-0">
-          <select
-            data-slot="input-group-control"
-            class="h-9 cursor-pointer border-0 bg-transparent py-1 pr-7 pl-2 text-sm outline-none w-28"
-            :value="definition.type"
-            @change="
-              emit('update', index, {
-                type: ($event.target as HTMLSelectElement).value as PropertyType,
-              })
-            "
-          >
-            <option v-for="option in propertyTypes" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </InputGroupAddon>
 
         <InputGroupAddon
           v-if="definition.type === 'checkbox'"
