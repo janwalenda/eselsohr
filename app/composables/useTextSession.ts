@@ -7,6 +7,9 @@ import { ERROR_TYPE, SyncService } from "@/lib/nc-text/SyncService";
 import { getDocumentState } from "@/lib/nc-text/yjs";
 import type { CollabSession, OpenData, TextConnection } from "@/lib/nc-text/types";
 
+/** Ensures a new page session opens only after the previous one has closed. */
+let pendingSessionClose: Promise<void> | null = null;
+
 export interface TextSessionUser {
   name: string;
   color: string;
@@ -147,7 +150,7 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
     });
 
     bus.on("sync", () => {
-      if (syncService.pushError > 0) {
+      if (syncService.pushError > 0 && syncService.pushEnabled) {
         void syncService.sendStepsNow().catch(() => {});
       }
     });
@@ -193,6 +196,7 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
       if (type === ERROR_TYPE.PUSH_FORBIDDEN) {
         readOnly.value = true;
         status.value = "readonly";
+        syncService.pushEnabled = false;
       }
     });
 
@@ -259,6 +263,10 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
   }
 
   async function connect(cb: ConnectCallbacks) {
+    if (pendingSessionClose) {
+      await pendingSessionClose.catch(() => {});
+    }
+
     callbacks = cb;
     provider = new HttpProvider({ doc: ydoc, awareness, syncService });
     status.value = "connecting";
@@ -274,20 +282,34 @@ export function useTextSession(collectiveId: number, pageId: number, user: TextS
 
     closed = true;
 
-    if (autosaveTimer) {
-      clearTimeout(autosaveTimer);
-    }
+    const closeWork = (async () => {
+      if (autosaveTimer) {
+        clearTimeout(autosaveTimer);
+      }
 
-    if (dirty.value && !expired.value && !conflictContent.value) {
-      await save(true).catch(() => {});
-    }
+      syncService.pushEnabled = false;
 
-    await syncService.close().catch(() => {});
-    provider?.destroy();
-    provider = null;
-    awareness.destroy();
-    ydoc.destroy();
-    status.value = "idle";
+      if (dirty.value && !expired.value && !conflictContent.value) {
+        await save(true).catch(() => {});
+      }
+
+      await syncService.close().catch(() => {});
+      provider?.destroy();
+      provider = null;
+      awareness.destroy();
+      ydoc.destroy();
+      status.value = "idle";
+    })();
+
+    pendingSessionClose = closeWork;
+
+    try {
+      await closeWork;
+    } finally {
+      if (pendingSessionClose === closeWork) {
+        pendingSessionClose = null;
+      }
+    }
   }
 
   bindBus();

@@ -777,10 +777,10 @@ function saveBeforeUnload() {
   void session.save(true);
 }
 
-onBeforeUnmount(async () => {
+onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", saveBeforeUnload);
-  await session.close();
   editor.value?.destroy();
+  void session.close();
 });
 
 defineExpose({

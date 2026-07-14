@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { getPageBreadcrumb } from "@/composables/useCollectivePages";
 import { isLandingPage, resolveSiblingCreateParentId } from "~~/shared/collectives";
 import { toast } from "vue-sonner";
@@ -48,20 +48,15 @@ const { definitions, addProperty, updateProperty, removeProperty } = usePageProp
 
 const apiFetch = useApiFetch();
 
-const knownTags = ref<string[]>([]);
-
-watch(
-  () => [props.collectiveId, props.pageId],
-  async () => {
-    try {
-      const response = await apiFetch<{ tags: string[] }>("/api/search/tags");
-
-      knownTags.value = response.tags;
-    } catch {
-      knownTags.value = [];
-    }
+const { data: knownTags } = await useAsyncData(
+  "known-tags",
+  () =>
+    apiFetch<{ tags: string[] }>("/api/search/tags")
+      .then((response) => response.tags)
+      .catch(() => [] as string[]),
+  {
+    default: () => [] as string[],
   },
-  { immediate: true },
 );
 
 const pagePayload = computed(() => pageState.data.value);
@@ -171,7 +166,7 @@ async function handleWikiLinkClick(payload: { target: string; resolvedPageId: nu
         <ClientOnly>
           <TextCollaborativeEditor
             ref="editorRef"
-            :key="editorKey"
+            :key="`${pageId}-${editorKey}`"
             :collective-id="collectiveId"
             :page-id="pageId"
             :user-name="userName"
