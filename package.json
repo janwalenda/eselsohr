@@ -37,6 +37,7 @@
     "@vueuse/core": "^13.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "force-graph": "^1.51.4",
     "lib0": "^0.2.117",
     "lucide-vue-next": "^0.511.0",
     "markdown-it": "^14.2.0",

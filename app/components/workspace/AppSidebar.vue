@@ -42,6 +42,14 @@ const activePageId = computed(() => {
   return Number.isFinite(pageId) ? pageId : null;
 });
 
+const isGraphView = computed(() => {
+  if (!Number.isFinite(currentCollectiveId.value)) {
+    return false;
+  }
+
+  return /^\/app\/\d+\/graph\/?$/.test(route.path);
+});
+
 const nextcloudHost = computed(() => {
   if (!session.value) {
     return "";
@@ -121,6 +129,7 @@ function openQuickSwitcher() {
               :collective="collective"
               :is-active="currentCollectiveId === collective.id"
               :active-page-id="currentCollectiveId === collective.id ? activePageId : null"
+              :is-graph-view="currentCollectiveId === collective.id && isGraphView"
             />
           </SidebarMenu>
         </SidebarGroupContent>
