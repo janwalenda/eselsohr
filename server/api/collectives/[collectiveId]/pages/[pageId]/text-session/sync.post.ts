@@ -1,3 +1,3 @@
-import { proxyTextSessionAction } from "../../../../../../utils/nc-text";
+import { proxyTextSessionAction } from '../../../../../../utils/nc-text'
 
-export default defineEventHandler((event) => proxyTextSessionAction(event, "sync"));
+export default defineEventHandler(event => proxyTextSessionAction(event, 'sync'))

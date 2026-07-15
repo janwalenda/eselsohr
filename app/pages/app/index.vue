@@ -1,16 +1,18 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: "workspace",
-});
+  layout: 'workspace',
+})
 
-const { collectives, pending, error } = useCollectives();
+const { collectives, pending, error } = useCollectives()
 </script>
 
 <template>
   <div class="mx-auto flex min-h-[70vh] max-w-4xl items-center justify-center px-6 py-10">
     <Card class="w-full max-w-2xl p-8">
       <div class="space-y-3">
-        <h1 class="text-3xl font-semibold tracking-tight">Wähle ein Collective</h1>
+        <h1 class="text-3xl font-semibold tracking-tight">
+          Wähle ein Collective
+        </h1>
         <p class="text-sm text-muted-foreground">
           Nutze die Sidebar links, um in deine Collectives und Seiten zu springen. Mit
           <kbd class="rounded border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
@@ -29,7 +31,7 @@ const { collectives, pending, error } = useCollectives();
           {{ error.message }}
         </Card>
 
-        <div v-else-if="collectives.length > 0" class="grid gap-3">
+        <div v-else-if="collectives.length > 0" class="grid gap-3 bg-green">
           <NuxtLink
             v-for="collective in collectives"
             :key="collective.id"
@@ -37,7 +39,7 @@ const { collectives, pending, error } = useCollectives();
             class="rounded-lg border p-4 transition hover:bg-accent hover:text-accent-foreground"
           >
             <div class="font-medium">
-              {{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}
+              {{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}
             </div>
             <div class="mt-1 text-sm text-muted-foreground">
               {{ collective.slug }}

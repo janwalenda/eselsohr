@@ -6,12 +6,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { fromBase64, toBase64 } from "lib0/buffer";
+import { fromBase64, toBase64 } from 'lib0/buffer'
 
 export function encodeArrayBuffer(data: Uint8Array): string {
-  return toBase64(new Uint8Array(data));
+  return toBase64(new Uint8Array(data))
 }
 
 export function decodeArrayBuffer(encoded: string): Uint8Array {
-  return fromBase64(encoded);
+  return fromBase64(encoded)
 }

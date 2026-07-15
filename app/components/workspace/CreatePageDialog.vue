@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import { ref, watch } from 'vue'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,49 +8,42 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
-const props = withDefaults(
-  defineProps<{
-    open: boolean;
-    contextLabel?: string;
-  }>(),
-  {
-    contextLabel: "",
-  },
-);
+const props = withDefaults(defineProps<{
+  open: boolean
+  contextLabel?: string
+}>(), {
+  contextLabel: '',
+})
 
 const emit = defineEmits<{
-  "update:open": [value: boolean];
-  submit: [title: string];
-}>();
+  'update:open': [value: boolean]
+  submit: [title: string]
+}>()
 
-const title = ref("");
+const title = ref('')
 
-watch(
-  () => props.open,
-  (value) => {
-    if (value) {
-      title.value = "";
-    }
-  },
-);
+watch(() => props.open, (value) => {
+  if (value) {
+    title.value = ''
+  }
+})
 
 function close() {
-  emit("update:open", false);
+  emit('update:open', false)
 }
 
 function handleSubmit() {
-  const trimmed = title.value.trim();
-
+  const trimmed = title.value.trim()
   if (!trimmed) {
-    return;
+    return
   }
 
-  emit("submit", trimmed);
-  close();
+  emit('submit', trimmed)
+  close()
 }
 </script>
 
@@ -76,8 +69,12 @@ function handleSubmit() {
       </div>
 
       <DialogFooter>
-        <Button @click="close"> Abbrechen </Button>
-        <Button @click="handleSubmit"> Erstellen </Button>
+        <Button variant="outline" @click="close">
+          Abbrechen
+        </Button>
+        <Button @click="handleSubmit">
+          Erstellen
+        </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

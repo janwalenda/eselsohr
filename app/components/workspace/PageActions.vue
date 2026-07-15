@@ -1,104 +1,101 @@
 <script setup lang="ts">
-import type { CollectivePage } from "~~/shared/collectives";
-import { resolveCreateParentId } from "~~/shared/collectives";
-import { extractApiErrorMessage } from "~~/shared/api-errors";
-import { toast } from "vue-sonner";
-import { MoreHorizontalIcon, PlusIcon } from "lucide-vue-next";
-import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
-import DeletePageDialog from "@/components/workspace/DeletePageDialog.vue";
-import MovePageDialog from "@/components/workspace/MovePageDialog.vue";
-import RenamePageDialog from "@/components/workspace/RenamePageDialog.vue";
-import SharePageDialog from "@/components/workspace/SharePageDialog.vue";
-import { Button } from "@/components/ui/button";
+import type { CollectivePage } from '~~/shared/collectives'
+import { resolveCreateParentId } from '~~/shared/collectives'
+import { extractApiErrorMessage } from '~~/shared/api-errors'
+import { toast } from 'vue-sonner'
+import { MoreHorizontalIcon, PlusIcon } from 'lucide-vue-next'
+import CreatePageDialog from '@/components/workspace/CreatePageDialog.vue'
+import DeletePageDialog from '@/components/workspace/DeletePageDialog.vue'
+import MovePageDialog from '@/components/workspace/MovePageDialog.vue'
+import RenamePageDialog from '@/components/workspace/RenamePageDialog.vue'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 
 const props = defineProps<{
-  collectiveId: number;
-  page: CollectivePage;
-  flatPages: CollectivePage[];
-}>();
+  collectiveId: number
+  page: CollectivePage
+  flatPages: CollectivePage[]
+}>()
 
-const { createPage, updatePage, deletePage } = useCollectivePages(() => props.collectiveId);
+const { createPage, updatePage, deletePage } = useCollectivePages(() => props.collectiveId)
 
-const createOpen = ref(false);
-
-const renameOpen = ref(false);
-
-const moveOpen = ref(false);
-
-const deleteOpen = ref(false);
-
-const shareOpen = ref(false);
+const createOpen = ref(false)
+const renameOpen = ref(false)
+const moveOpen = ref(false)
+const deleteOpen = ref(false)
 
 const moveOptions = computed(() =>
   props.flatPages
-    .filter((candidate) => candidate.id !== props.page.id)
-    .map((candidate) => ({
+    .filter(candidate => candidate.id !== props.page.id)
+    .map(candidate => ({
       id: candidate.id,
       label: candidate.title,
     })),
-);
+)
 
 function toMessage(error: unknown) {
-  return extractApiErrorMessage(error);
+  return extractApiErrorMessage(error)
 }
 
 async function handleCreate(title: string) {
   try {
-    const page = await createPage({ title, parentId: resolveCreateParentId(props.page) });
-
-    toast.success("Unterseite erstellt");
-    await navigateTo(`/app/${props.collectiveId}/${page.id}`);
-  } catch (error) {
-    toast.error(toMessage(error));
+    const page = await createPage({ title, parentId: resolveCreateParentId(props.page) })
+    toast.success('Unterseite erstellt')
+    await navigateTo(`/app/${props.collectiveId}/${page.id}`)
+  }
+  catch (error) {
+    toast.error(toMessage(error))
   }
 }
 
 async function handleRename(title: string) {
   try {
-    await updatePage(props.page.id, { title });
-    toast.success("Seite umbenannt");
-  } catch (error) {
-    toast.error(toMessage(error));
+    await updatePage(props.page.id, { title })
+    toast.success('Seite umbenannt')
+  }
+  catch (error) {
+    toast.error(toMessage(error))
   }
 }
 
-async function handleMove(payload: { parentId: number | null; index: number }) {
+async function handleMove(payload: { parentId: number | null, index: number }) {
   try {
-    await updatePage(props.page.id, payload);
-    toast.success("Seite verschoben");
-  } catch (error) {
-    toast.error(toMessage(error));
+    await updatePage(props.page.id, payload)
+    toast.success('Seite verschoben')
+  }
+  catch (error) {
+    toast.error(toMessage(error))
   }
 }
 
 async function handleDelete() {
   try {
-    await deletePage(props.page.id);
-    toast.success("Seite gelöscht");
-    await navigateTo(`/app/${props.collectiveId}`);
-  } catch (error) {
-    toast.error(toMessage(error));
+    await deletePage(props.page.id)
+    toast.success('Seite gelöscht')
+    await navigateTo(`/app/${props.collectiveId}`)
+  }
+  catch (error) {
+    toast.error(toMessage(error))
   }
 }
 </script>
 
 <template>
   <div class="flex items-center gap-2">
-    <Button size="sm" @click="createOpen = true">
+    <Button variant="outline" size="sm" @click="createOpen = true">
       <PlusIcon class="size-4" />
       Unterseite
     </Button>
 
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button size="icon">
+        <Button variant="outline" size="icon">
           <MoreHorizontalIcon class="size-4" />
           <span class="sr-only">Seitenaktionen</span>
         </Button>
@@ -107,9 +104,12 @@ async function handleDelete() {
         <DropdownMenuItem @select.prevent="createOpen = true">
           Unterseite erstellen
         </DropdownMenuItem>
-        <DropdownMenuItem @select.prevent="renameOpen = true"> Umbenennen </DropdownMenuItem>
-        <DropdownMenuItem @select.prevent="moveOpen = true"> Verschieben </DropdownMenuItem>
-        <DropdownMenuItem @select.prevent="shareOpen = true"> Öffentlich teilen </DropdownMenuItem>
+        <DropdownMenuItem @select.prevent="renameOpen = true">
+          Umbenennen
+        </DropdownMenuItem>
+        <DropdownMenuItem @select.prevent="moveOpen = true">
+          Verschieben
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" @select.prevent="deleteOpen = true">
           Löschen
@@ -133,7 +133,10 @@ async function handleDelete() {
       :options="moveOptions"
       @submit="handleMove"
     />
-    <DeletePageDialog v-model:open="deleteOpen" :title="page.title" @submit="handleDelete" />
-    <SharePageDialog v-model:open="shareOpen" :collective-id="collectiveId" :page="page" />
+    <DeletePageDialog
+      v-model:open="deleteOpen"
+      :title="page.title"
+      @submit="handleDelete"
+    />
   </div>
 </template>

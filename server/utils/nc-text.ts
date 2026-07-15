@@ -1,6 +1,9 @@
-import type { H3Event } from "h3";
-import type { TextOpenData, TextSessionAction } from "../../shared/text-session";
-import { ncFetch } from "./nc-api";
+import type { H3Event } from 'h3'
+import type {
+  TextOpenData,
+  TextSessionAction,
+} from '../../shared/text-session'
+import { ncFetch } from './nc-api'
 
 /**
  * Client for the Nextcloud Text collaborative editing API (`/apps/text/session/*`).
@@ -12,28 +15,27 @@ import { ncFetch } from "./nc-api";
  * instead of being turned into errors.
  */
 
-const TEXT_BASE = "/index.php/apps/text";
+const TEXT_BASE = '/index.php/apps/text'
 
-type JsonObject = Record<string, unknown>;
+type JsonObject = Record<string, unknown>
 
 function textHeaders() {
   return {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
 }
 
 async function parseJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-
+  const text = await response.text()
   if (!text) {
-    return null;
+    return null
   }
-
   try {
-    return JSON.parse(text);
-  } catch {
-    return text;
+    return JSON.parse(text)
+  }
+  catch {
+    return text
   }
 }
 
@@ -43,29 +45,28 @@ async function parseJson(response: Response): Promise<unknown> {
  */
 export async function createTextSession(
   event: H3Event,
-  params: { fileId: number; filePath: string; baseVersionEtag?: string | null },
+  params: { fileId: number, filePath: string, baseVersionEtag?: string | null },
 ): Promise<TextOpenData> {
   const response = await ncFetch(event, `${TEXT_BASE}/session/${params.fileId}/create`, {
-    method: "PUT",
+    method: 'PUT',
     headers: textHeaders(),
     body: JSON.stringify({
       fileId: params.fileId,
       filePath: params.filePath,
       baseVersionEtag: params.baseVersionEtag ?? undefined,
     }),
-  });
+  })
 
-  const body = await parseJson(response);
-
+  const body = await parseJson(response)
   if (!response.ok) {
     throw createError({
       statusCode: response.status,
-      statusMessage: extractError(body) ?? "Failed to open Text editing session",
+      statusMessage: extractError(body) ?? 'Failed to open Text editing session',
       data: body,
-    });
+    })
   }
 
-  return body as TextOpenData;
+  return body as TextOpenData
 }
 
 /**
@@ -77,19 +78,18 @@ export async function forwardTextSession(
   action: TextSessionAction,
   documentId: number,
   payload: JsonObject,
-): Promise<{ status: number; body: unknown }> {
-  const verb = action === "mention" ? "PUT" : "POST";
-
+): Promise<{ status: number, body: unknown }> {
+  const verb = action === 'mention' ? 'PUT' : 'POST'
   const response = await ncFetch(event, `${TEXT_BASE}/session/${documentId}/${action}`, {
     method: verb,
     headers: textHeaders(),
     body: JSON.stringify(payload),
-  });
+  })
 
   return {
     status: response.status,
     body: await parseJson(response),
-  };
+  }
 }
 
 /**
@@ -97,28 +97,23 @@ export async function forwardTextSession(
  * status code (so 409 outside-change / 412 expired reach the SyncService intact).
  */
 export async function proxyTextSessionAction(event: H3Event, action: TextSessionAction) {
-  const payload = await readBody<JsonObject>(event);
-
-  const documentId = Number(payload?.documentId);
-
+  const payload = await readBody<JsonObject>(event)
+  const documentId = Number(payload?.documentId)
   if (!Number.isFinite(documentId)) {
-    throw createError({ statusCode: 400, statusMessage: "Missing documentId in request body" });
+    throw createError({ statusCode: 400, statusMessage: 'Missing documentId in request body' })
   }
 
-  const { status, body } = await forwardTextSession(event, action, documentId, payload);
-
-  setResponseStatus(event, status);
-  return body;
+  const { status, body } = await forwardTextSession(event, action, documentId, payload)
+  setResponseStatus(event, status)
+  return body
 }
 
 function extractError(body: unknown): string | undefined {
-  if (body && typeof body === "object" && "error" in body) {
-    const value = (body as { error?: unknown }).error;
-
-    if (typeof value === "string") {
-      return value;
+  if (body && typeof body === 'object' && 'error' in body) {
+    const value = (body as { error?: unknown }).error
+    if (typeof value === 'string') {
+      return value
     }
   }
-
-  return undefined;
+  return undefined
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-const { loggedIn, fetchSession } = useNcSession();
+const { loggedIn, fetchSession } = useNcSession()
 
-await fetchSession();
-await navigateTo(loggedIn.value ? "/app" : "/login", { replace: true });
+await fetchSession()
+await navigateTo(loggedIn.value ? '/app' : '/login', { replace: true })
 </script>
 
 <template>

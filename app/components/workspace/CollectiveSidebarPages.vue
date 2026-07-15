@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import PageTree from "@/components/workspace/PageTree.vue";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SidebarMenuSub, SidebarMenuSubItem } from "@/components/ui/sidebar";
+import PageTree from '@/components/workspace/PageTree.vue'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+} from '@/components/ui/sidebar'
 
 const props = defineProps<{
-  collectiveId: number;
-  activePageId?: number | null;
-}>();
+  collectiveId: number
+  activePageId?: number | null
+}>()
 
-const { sidebarPages, pending, error, flatPages, createPage, updatePage, deletePage } =
-  useCollectivePages(() => props.collectiveId);
+const { pages, pending, error, flatPages, createPage, updatePage, deletePage } = useCollectivePages(
+  () => props.collectiveId,
+)
 </script>
 
 <template>
@@ -31,7 +35,7 @@ const { sidebarPages, pending, error, flatPages, createPage, updatePage, deleteP
   <PageTree
     v-else
     :collective-id="collectiveId"
-    :nodes="sidebarPages"
+    :nodes="pages"
     :flat-pages="flatPages"
     :active-page-id="activePageId"
     :create-page="createPage"

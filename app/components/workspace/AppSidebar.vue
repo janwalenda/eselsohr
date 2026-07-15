@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { LogOutIcon, SearchIcon } from "lucide-vue-next";
-import CollectiveSidebarGroup from "@/components/workspace/CollectiveSidebarGroup.vue";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LogOutIcon, SearchIcon } from 'lucide-vue-next'
+import CollectiveSidebarGroup from '@/components/workspace/CollectiveSidebarGroup.vue'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sidebar,
   SidebarContent,
@@ -15,60 +15,46 @@ import {
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar'
 
-const route = useRoute();
+const route = useRoute()
+const { isMobile, setOpenMobile } = useSidebar()
 
-const { isMobile, setOpenMobile } = useSidebar();
-
-watch(
-  () => route.fullPath,
-  () => {
-    if (isMobile.value) {
-      setOpenMobile(false);
-    }
-  },
-);
-
-const { session, signOut } = useNcSession();
-
-const { collectives, pending, error } = useCollectives();
-
-const currentCollectiveId = computed(() => Number(route.params.collectiveId));
-
-const activePageId = computed(() => {
-  const pageId = Number(route.params.pageId);
-
-  return Number.isFinite(pageId) ? pageId : null;
-});
-
-const isGraphView = computed(() => {
-  if (!Number.isFinite(currentCollectiveId.value)) {
-    return false;
+watch(() => route.fullPath, () => {
+  if (isMobile.value) {
+    setOpenMobile(false)
   }
+})
 
-  return /^\/app\/\d+\/graph\/?$/.test(route.path);
-});
+const { session, signOut } = useNcSession()
+const { collectives, pending, error } = useCollectives()
+
+const currentCollectiveId = computed(() => Number(route.params.collectiveId))
+const activePageId = computed(() => {
+  const pageId = Number(route.params.pageId)
+  return Number.isFinite(pageId) ? pageId : null
+})
 
 const nextcloudHost = computed(() => {
   if (!session.value) {
-    return "";
+    return ''
   }
 
   try {
-    return new URL(session.value.ncUrl).host;
-  } catch {
-    return session.value.ncUrl;
+    return new URL(session.value.ncUrl).host
   }
-});
+  catch {
+    return session.value.ncUrl
+  }
+})
 
 async function handleSignOut() {
-  await signOut();
-  await navigateTo("/login");
+  await signOut()
+  await navigateTo('/login')
 }
 
 function openQuickSwitcher() {
-  window.dispatchEvent(new Event("workspace:open-switcher"));
+  window.dispatchEvent(new Event('workspace:open-switcher'))
 }
 </script>
 
@@ -76,13 +62,13 @@ function openQuickSwitcher() {
   <Sidebar collapsible="offcanvas">
     <SidebarHeader>
       <div class="flex items-center gap-2 px-2 py-1.5">
-        <div
-          class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-md text-sm font-semibold"
-        >
-          {{ session?.loginName?.charAt(0) ?? "E" }}
+        <div class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-md text-sm font-semibold">
+          E
         </div>
         <div class="min-w-0">
-          <div class="truncate text-sm font-medium">Eselsohr</div>
+          <div class="truncate text-sm font-medium">
+            Eselsohr
+          </div>
           <div class="truncate text-xs text-sidebar-foreground/70">
             {{ session?.loginName }}@{{ nextcloudHost }}
           </div>
@@ -91,7 +77,7 @@ function openQuickSwitcher() {
     </SidebarHeader>
 
     <SidebarContent>
-      <SidebarGroup class="max-sm:hidden">
+      <SidebarGroup>
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
@@ -129,7 +115,6 @@ function openQuickSwitcher() {
               :collective="collective"
               :is-active="currentCollectiveId === collective.id"
               :active-page-id="currentCollectiveId === collective.id ? activePageId : null"
-              :is-graph-view="currentCollectiveId === collective.id && isGraphView"
             />
           </SidebarMenu>
         </SidebarGroupContent>
