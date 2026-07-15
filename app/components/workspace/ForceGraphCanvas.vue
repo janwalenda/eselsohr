@@ -48,7 +48,7 @@ function getThemeColor(variable: string, fallback: string) {
 function configureGraph(instance: ForceGraphInstance) {
   instance
     .nodeVal((node) => node.val)
-    .nodeRelSize(6)
+    .nodeRelSize(2)
     .nodeLabel((node) => node.title)
     .nodeColor((node) =>
       node.kind === "broken"
