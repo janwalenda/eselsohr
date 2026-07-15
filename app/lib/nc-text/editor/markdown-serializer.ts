@@ -11,6 +11,7 @@ import {
   type MarkdownSerializerState,
   defaultMarkdownSerializer,
 } from "prosemirror-markdown";
+import { serializeWikiLink } from "~~/shared/wiki-links";
 
 function serializeCodeBlock(state: MarkdownSerializerState, node: ProseMirrorNode) {
   const language = (node.attrs.language as string) || "";
@@ -104,6 +105,17 @@ const nodes: Record<
   taskItem: (state, node) => {
     state.write(`[${node.attrs.checked ? "x" : " "}] `);
     state.renderContent(node);
+  },
+  wikiLink: (state, node) => {
+    const target = String(node.attrs.target ?? "").trim();
+
+    const label = node.attrs.label ? String(node.attrs.label).trim() : undefined;
+
+    if (!target) {
+      return;
+    }
+
+    state.write(serializeWikiLink({ target, label }));
   },
 };
 

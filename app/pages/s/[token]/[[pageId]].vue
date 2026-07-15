@@ -93,7 +93,11 @@ const routeErrorMessage = computed(
                 <p class="text-sm text-muted-foreground">Öffentlicher Leselink</p>
               </div>
 
-              <PublicPageView :content="shareState.pageContent.value.content" />
+              <PublicPageView
+                :content="shareState.pageContent.value.content"
+                :pages="flatPages"
+                :token="token"
+              />
             </div>
           </Card>
 

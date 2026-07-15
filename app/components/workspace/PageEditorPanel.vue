@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { getPageBreadcrumb } from "@/composables/useCollectivePages";
-import { isLandingPage } from "~~/shared/collectives";
+import { isLandingPage, resolveSiblingCreateParentId } from "~~/shared/collectives";
+import { toast } from "vue-sonner";
 import PageActions from "@/components/workspace/PageActions.vue";
 import PageBreadcrumb from "@/components/workspace/PageBreadcrumb.vue";
 import PagePropertiesPanel from "@/components/workspace/PagePropertiesPanel.vue";
@@ -17,7 +18,12 @@ const { session } = useNcSession();
 
 const { collectives } = useCollectives();
 
-const { pages, flatPages, error: pagesError } = useCollectivePages(() => props.collectiveId);
+const {
+  pages,
+  flatPages,
+  error: pagesError,
+  createPage,
+} = useCollectivePages(() => props.collectiveId);
 
 const pageState = usePage(
   () => props.collectiveId,
@@ -26,12 +32,14 @@ const pageState = usePage(
 
 await pageState;
 
+const { properties, setProperties } = pageState;
+
 const pageKey = computed(() => `${props.collectiveId}:${props.pageId}`);
 
 const editorRef = ref<InstanceType<typeof TextCollaborativeEditor> | null>(null);
 
 const { definitions, addProperty, updateProperty, removeProperty } = usePageProperties(
-  pageState,
+  { properties, setProperties },
   pageKey,
   {
     onCommit: () => editorRef.value?.scheduleSave(),
@@ -40,20 +48,15 @@ const { definitions, addProperty, updateProperty, removeProperty } = usePageProp
 
 const apiFetch = useApiFetch();
 
-const knownTags = ref<string[]>([]);
-
-watch(
-  () => [props.collectiveId, props.pageId],
-  async () => {
-    try {
-      const response = await apiFetch<{ tags: string[] }>("/api/search/tags");
-
-      knownTags.value = response.tags;
-    } catch {
-      knownTags.value = [];
-    }
+const { data: knownTags } = await useAsyncData(
+  "known-tags",
+  () =>
+    apiFetch<{ tags: string[] }>("/api/search/tags")
+      .then((response) => response.tags)
+      .catch(() => [] as string[]),
+  {
+    default: () => [] as string[],
   },
-  { immediate: true },
 );
 
 const pagePayload = computed(() => pageState.data.value);
@@ -93,6 +96,34 @@ const editorKey = ref(0);
 async function reloadEditor() {
   await pageState.reload();
   editorKey.value += 1;
+}
+
+function toMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unbekannter Fehler";
+}
+
+async function handleWikiLinkClick(payload: { target: string; resolvedPageId: number | null }) {
+  if (payload.resolvedPageId) {
+    await navigateTo(`/app/${props.collectiveId}/${payload.resolvedPageId}`);
+    return;
+  }
+
+  const currentPage = flatPages.value.find((page) => page.id === props.pageId);
+
+  if (!currentPage) {
+    return;
+  }
+
+  try {
+    const page = await createPage({
+      title: payload.target,
+      parentId: resolveSiblingCreateParentId(currentPage),
+    });
+
+    await navigateTo(`/app/${props.collectiveId}/${page.id}`);
+  } catch (error) {
+    toast.error(toMessage(error));
+  }
 }
 </script>
 
@@ -135,12 +166,14 @@ async function reloadEditor() {
         <ClientOnly>
           <TextCollaborativeEditor
             ref="editorRef"
-            :key="editorKey"
+            :key="`${pageId}-${editorKey}`"
             :collective-id="collectiveId"
             :page-id="pageId"
             :user-name="userName"
-            :properties="pageState.properties.value"
-            @update:properties="pageState.setProperties"
+            :properties="properties"
+            :pages="flatPages"
+            @wiki-link-click="handleWikiLinkClick"
+            @update:properties="setProperties"
             @reload="reloadEditor"
           />
           <template #fallback>
