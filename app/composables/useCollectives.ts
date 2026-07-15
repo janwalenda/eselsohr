@@ -1,21 +1,22 @@
-import type { CollectiveSummary } from '~~/shared/collectives'
+import type { CollectiveSummary } from "~~/shared/collectives";
 
 export function useCollectives() {
-  const apiFetch = useApiFetch()
+  const apiFetch = useApiFetch();
 
   const asyncData = useAsyncData(
-    'collectives',
+    "collectives",
     async () => {
-      const response = await apiFetch<{ collectives: CollectiveSummary[] }>('/api/collectives')
-      return response.collectives
+      const response = await apiFetch<{ collectives: CollectiveSummary[] }>("/api/collectives");
+
+      return response.collectives;
     },
     {
       default: () => [],
     },
-  )
+  );
 
   return {
     ...asyncData,
     collectives: asyncData.data,
-  }
+  };
 }

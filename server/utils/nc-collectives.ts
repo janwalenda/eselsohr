@@ -1,39 +1,38 @@
-import type { H3Event } from 'h3'
+import type { H3Event } from "h3";
 import type {
   CollectivePage,
   CollectivePageNode,
   CollectiveSummary,
   CreatePageInput,
   UpdatePageInput,
-} from '../../shared/collectives'
-import { isLandingPage } from '../../shared/collectives'
-import { ncFetchJson } from './nc-api'
+} from "../../shared/collectives";
+import { ncFetchJson } from "./nc-api";
 
 type OcsResponse<T> = {
   ocs?: {
-    data?: T
-  }
-}
+    data?: T;
+  };
+};
 
 type NcCollectiveResponse = {
   collectives?: Array<{
-    id: number
-    name: string
-    emoji?: string | null
-    canEdit?: boolean
-  }>
-}
+    id: number;
+    name: string;
+    emoji?: string | null;
+    canEdit?: boolean;
+  }>;
+};
 
 type NcPageResponse = {
-  page?: CollectivePage
-}
+  page?: CollectivePage;
+};
 
 type NcPagesResponse = {
-  pages?: CollectivePage[]
-}
+  pages?: CollectivePage[];
+};
 
-function collectivesPath(path = '') {
-  return `/ocs/v2.php/apps/collectives/api/v1.0${path}?format=json`
+function collectivesPath(path = "") {
+  return `/ocs/v2.php/apps/collectives/api/v1.0${path}`;
 }
 
 async function collectivesRequest<T>(
@@ -41,146 +40,160 @@ async function collectivesRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const headers = new Headers(init.headers)
-  if (init.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
+  const headers: Record<string, string> = {};
+
+  if (init.body && !(init.headers && new Headers(init.headers).has("Content-Type"))) {
+    headers["Content-Type"] = "application/json";
   }
 
   const response = await ncFetchJson<OcsResponse<T>>(event, collectivesPath(path), {
     ...init,
-    headers,
-  })
+    headers: {
+      ...headers,
+      ...(init.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {}),
+    },
+  });
 
-  return (response.ocs?.data ?? {}) as T
+  return (response.ocs?.data ?? {}) as T;
 }
 
 function slugifyCollectiveName(name: string) {
   return name
     .toLowerCase()
     .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function sortPageNodes(nodes: CollectivePageNode[]) {
-  nodes.sort((left, right) => left.title.localeCompare(right.title))
+  nodes.sort((left, right) => left.title.localeCompare(right.title));
 
   for (const node of nodes) {
-    const subpageOrder = new Map(node.subpageOrder.map((id, index) => [id, index]))
+    const subpageOrder = new Map(node.subpageOrder.map((id, index) => [id, index]));
+
     node.children.sort((left, right) => {
-      const leftIndex = subpageOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER
-      const rightIndex = subpageOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER
-      return leftIndex - rightIndex || left.title.localeCompare(right.title)
-    })
-    sortPageNodes(node.children)
+      const leftIndex = subpageOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER;
+
+      const rightIndex = subpageOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER;
+
+      return leftIndex - rightIndex || left.title.localeCompare(right.title);
+    });
+    sortPageNodes(node.children);
   }
 }
 
 export function buildPageTree(pages: CollectivePage[]) {
-  const nodes = new Map<number, CollectivePageNode>()
-  const roots: CollectivePageNode[] = []
+  const nodes = new Map<number, CollectivePageNode>();
+
+  const roots: CollectivePageNode[] = [];
 
   for (const page of pages) {
     nodes.set(page.id, {
       ...page,
       children: [],
-    })
+    });
   }
 
   for (const node of nodes.values()) {
-    const parent = nodes.get(node.parentId)
+    const parent = nodes.get(node.parentId);
+
     if (parent) {
-      parent.children.push(node)
-      continue
+      parent.children.push(node);
+      continue;
     }
-    roots.push(node)
+
+    roots.push(node);
   }
 
-  sortPageNodes(roots)
-  return roots
+  sortPageNodes(roots);
+  return roots;
 }
 
 export async function listCollectives(event: H3Event) {
-  const data = await collectivesRequest<NcCollectiveResponse>(event, '/collectives')
-  const collectives = data.collectives ?? []
+  const data = await collectivesRequest<NcCollectiveResponse>(event, "/collectives");
 
-  const withPaths = await Promise.all(collectives.map(async (collective) => {
-    let path: string | null = null
-    try {
-      const pages = await listPages(event, collective.id)
-      path = pages.find(page => page.collectivePath)?.collectivePath ?? null
-    }
-    catch {
-      path = null
-    }
+  const collectives = data.collectives ?? [];
 
-    return {
-      id: collective.id,
-      name: collective.name,
-      emoji: collective.emoji ?? null,
-      canEdit: collective.canEdit ?? false,
-      slug: slugifyCollectiveName(collective.name),
-      path,
-    } satisfies CollectiveSummary
-  }))
+  const withPaths = await Promise.all(
+    collectives.map(async (collective) => {
+      let path: string | null = null;
 
-  return withPaths
+      try {
+        const pages = await listPages(event, collective.id);
+
+        path = pages.find((page) => page.collectivePath)?.collectivePath ?? null;
+      } catch {
+        // Ignore collectives we cannot list pages for.
+      }
+
+      return {
+        id: collective.id,
+        name: collective.name,
+        emoji: collective.emoji ?? null,
+        canEdit: collective.canEdit ?? false,
+        slug: slugifyCollectiveName(collective.name),
+        path,
+      } satisfies CollectiveSummary;
+    }),
+  );
+
+  return withPaths;
 }
 
 export async function listPages(event: H3Event, collectiveId: number) {
-  const data = await collectivesRequest<NcPagesResponse>(event, `/collectives/${collectiveId}/pages`)
-  return data.pages ?? []
+  const data = await collectivesRequest<NcPagesResponse>(
+    event,
+    `/collectives/${collectiveId}/pages`,
+  );
+
+  return data.pages ?? [];
 }
 
 export async function listPageTree(event: H3Event, collectiveId: number) {
-  return buildPageTree(await listPages(event, collectiveId))
+  return buildPageTree(await listPages(event, collectiveId));
 }
 
 export async function getPage(event: H3Event, collectiveId: number, pageId: number) {
-  const data = await collectivesRequest<NcPageResponse>(event, `/collectives/${collectiveId}/pages/${pageId}`)
+  const data = await collectivesRequest<NcPageResponse>(
+    event,
+    `/collectives/${collectiveId}/pages/${pageId}`,
+  );
+
   if (!data.page) {
-    throw createError({ statusCode: 404, statusMessage: 'Page not found' })
+    throw createError({ statusCode: 404, statusMessage: "Page not found" });
   }
-  return data.page
+
+  return data.page;
 }
 
 export async function createPage(event: H3Event, collectiveId: number, input: CreatePageInput) {
-  let parentId = input.parentId ?? 0
-  if (parentId !== 0) {
-    const parent = await getPage(event, collectiveId, parentId)
-    if (isLandingPage(parent)) {
-      parentId = 0
-    }
-  }
+  const parentId = input.parentId ?? 0;
+
+  const title = input.title.trim();
 
   const requestBody = {
-    title: input.title,
+    title,
     parentId,
     templateId: null,
-  }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7441/ingest/295730c0-36a3-4a8b-b23d-14de7325db37',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ac45ab'},body:JSON.stringify({sessionId:'ac45ab',runId:'native-parity',hypothesisId:'M1,M2',location:'nc-collectives.ts:createPage',message:'nc create request',data:{collectiveId,parentId,requestBody},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
+  };
 
   const data = await collectivesRequest<NcPageResponse>(
     event,
     `/collectives/${collectiveId}/pages/${parentId}`,
     {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(requestBody),
     },
-  )
-
-  // #region agent log
-  fetch('http://127.0.0.1:7441/ingest/295730c0-36a3-4a8b-b23d-14de7325db37',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ac45ab'},body:JSON.stringify({sessionId:'ac45ab',runId:'native-parity',hypothesisId:'M1,M2',location:'nc-collectives.ts:createPage',message:'nc create ok',data:{pageId:data.page?.id,title:data.page?.title},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
+  );
 
   if (!data.page) {
-    throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the created page' })
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the created page",
+    });
   }
 
-  return data.page
+  return data.page;
 }
 
 export async function renamePage(
@@ -193,29 +206,32 @@ export async function renamePage(
     event,
     `/collectives/${collectiveId}/pages/${pageId}`,
     {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ title }),
     },
-  )
+  );
 
   if (!data.page) {
-    throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the renamed page' })
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the renamed page",
+    });
   }
 
-  return data.page
+  return data.page;
 }
 
 export async function movePage(
   event: H3Event,
   collectiveId: number,
   pageId: number,
-  input: Pick<UpdatePageInput, 'parentId' | 'index' | 'title'>,
+  input: Pick<UpdatePageInput, "parentId" | "index" | "title">,
 ) {
   const data = await collectivesRequest<NcPageResponse>(
     event,
     `/collectives/${collectiveId}/pages/${pageId}`,
     {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({
         parentId: input.parentId ?? null,
         index: input.index ?? 0,
@@ -223,13 +239,16 @@ export async function movePage(
         copy: false,
       }),
     },
-  )
+  );
 
   if (!data.page) {
-    throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the moved page' })
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the moved page",
+    });
   }
 
-  return data.page
+  return data.page;
 }
 
 export async function setSubpageOrder(
@@ -242,18 +261,21 @@ export async function setSubpageOrder(
     event,
     `/collectives/${collectiveId}/pages/${pageId}/subpageOrder`,
     {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({
         subpageOrder: JSON.stringify(subpageOrder),
       }),
     },
-  )
+  );
 
   if (!data.page) {
-    throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the updated page order' })
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the updated page order",
+    });
   }
 
-  return data.page
+  return data.page;
 }
 
 export async function updatePage(
@@ -263,18 +285,18 @@ export async function updatePage(
   input: UpdatePageInput,
 ) {
   if (input.subpageOrder) {
-    return setSubpageOrder(event, collectiveId, pageId, input.subpageOrder)
+    return setSubpageOrder(event, collectiveId, pageId, input.subpageOrder);
   }
 
   if (input.parentId !== undefined || input.index !== undefined) {
-    return movePage(event, collectiveId, pageId, input)
+    return movePage(event, collectiveId, pageId, input);
   }
 
   if (input.title !== undefined) {
-    return renamePage(event, collectiveId, pageId, input.title)
+    return renamePage(event, collectiveId, pageId, input.title);
   }
 
-  return getPage(event, collectiveId, pageId)
+  return getPage(event, collectiveId, pageId);
 }
 
 export async function deletePage(event: H3Event, collectiveId: number, pageId: number) {
@@ -282,13 +304,16 @@ export async function deletePage(event: H3Event, collectiveId: number, pageId: n
     event,
     `/collectives/${collectiveId}/pages/${pageId}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
     },
-  )
+  );
 
   if (!data.page) {
-    throw createError({ statusCode: 502, statusMessage: 'Nextcloud did not return the trashed page' })
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the trashed page",
+    });
   }
 
-  return data.page
+  return data.page;
 }

@@ -8,33 +8,34 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { getSchema } from '@tiptap/core'
-import { DOMParser } from '@tiptap/pm/model'
-import { prosemirrorToYXmlFragment } from 'y-prosemirror'
-import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from 'yjs'
-import { buildExtensions } from './extensions'
-import markdownit from './markdownit'
+import { prosemirrorToYXmlFragment } from "y-prosemirror";
+import { Doc, XmlFragment, applyUpdate, encodeStateAsUpdate } from "yjs";
+import { parseMarkdownFile } from "~~/shared/frontmatter";
+import { markdownToProseMirrorNode } from "./apply-markdown";
+
+/** Yjs transaction origin for the one-time initial markdown seed (not a user edit). */
+export const SEED_ORIGIN = "seed-initial-content";
 
 export function seedInitialContent(ydoc: Doc, content: string) {
-  if (!content?.trim()) {
-    return
+  const body = parseMarkdownFile(content).body;
+
+  if (!body?.trim()) {
+    return;
   }
 
-  const html = `${markdownit.render(content)} `
-  const schema = getSchema(buildExtensions({ editing: false }))
+  const node = markdownToProseMirrorNode(body);
 
-  const container = window.document.createElement('div')
-  container.innerHTML = html
-  const node = DOMParser.fromSchema(schema).parse(container)
+  const baseDoc = new Doc();
 
-  const baseDoc = new Doc()
   // Idempotent initial state requires a fixed clientID (see Text PR #5589).
-  baseDoc.clientID = 0
-  const fragment = baseDoc.get('default', XmlFragment) as XmlFragment
-  if (!fragment.doc) {
-    return
-  }
-  prosemirrorToYXmlFragment(node, fragment)
+  baseDoc.clientID = 0;
+  const fragment = baseDoc.get("default", XmlFragment) as XmlFragment;
 
-  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc))
+  if (!fragment.doc) {
+    return;
+  }
+
+  prosemirrorToYXmlFragment(node, fragment);
+
+  applyUpdate(ydoc, encodeStateAsUpdate(baseDoc), SEED_ORIGIN);
 }
