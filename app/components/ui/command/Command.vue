@@ -17,7 +17,7 @@ const props = withDefaults(
 
 const emits = defineEmits<ListboxRootEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = reactiveOmit(props, "class", "filterDisabled");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
