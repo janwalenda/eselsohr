@@ -2,18 +2,26 @@
 import type { CollectiveSummary } from "~~/shared/collectives";
 import { extractApiErrorMessage } from "~~/shared/api-errors";
 import { toast } from "vue-sonner";
-import { FilePlus2Icon, ChevronRightIcon, FolderOpenIcon } from "lucide-vue-next";
+import { FilePlus2Icon, ChevronRightIcon, FolderOpenIcon, GitBranchIcon } from "lucide-vue-next";
 import CollectiveSidebarPages from "@/components/workspace/CollectiveSidebarPages.vue";
 import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
 import { navigateToCollective } from "@/composables/useCollectiveNavigation";
 import { useCollectivePages } from "@/composables/useCollectivePages";
 import { Button } from "@/components/ui/button";
-import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import {
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
 
 const props = defineProps<{
   collective: CollectiveSummary;
   activePageId?: number | null;
   isActive: boolean;
+  isGraphView?: boolean;
 }>();
 
 const createOpen = ref(false);
@@ -124,6 +132,17 @@ async function handleCreate(title: string) {
         <span class="sr-only">Seite anlegen</span>
       </SidebarMenuAction>
     </div>
+
+    <SidebarMenuSub v-if="isActive">
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton as-child :is-active="isGraphView">
+          <NuxtLink :to="`/app/${collective.id}/graph`">
+            <GitBranchIcon class="size-4" />
+            <span>Graph</span>
+          </NuxtLink>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    </SidebarMenuSub>
 
     <CollectiveSidebarPages
       v-if="isActive && pagesExpanded"

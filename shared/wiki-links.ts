@@ -92,3 +92,23 @@ export function isWikiLinkResolved(
 ): boolean {
   return resolveWikiLinkTarget(ref.target, pages) !== null;
 }
+
+export function normalizeWikiLinkTarget(title: string) {
+  return title.trim().toLocaleLowerCase();
+}
+
+export function extractWikiLinkTargets(body: string) {
+  const targets: string[] = [];
+
+  const searchable = stripCodeRegions(body ?? "");
+
+  for (const match of searchable.matchAll(WIKI_LINK_PATTERN)) {
+    const target = match[1]?.trim();
+
+    if (target) {
+      targets.push(target);
+    }
+  }
+
+  return targets;
+}
