@@ -28,4 +28,21 @@ export default withNuxt(eslintConfigPrettier, {
       "vue/multi-word-component-names": "off",
       "vue/require-default-prop": "off",
     },
+  })
+  .override("nuxt/vue/rules", {
+    rules: {
+      "vue/max-lines-per-block": [
+        "error",
+        {
+          script: 80,
+          template: 80,
+          style: 80,
+          skipBlankLines: false,
+        },
+      ],
+    },
+  })
+  .append({
+    files: ["app/components/ui/**/*.vue"],
+    rules: { "vue/max-lines-per-block": "off" },
   });

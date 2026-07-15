@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import type { CollectivePage } from "~~/shared/collectives";
-import { resolveCreateParentId } from "~~/shared/collectives";
-import { extractApiErrorMessage } from "~~/shared/api-errors";
-import { toast } from "vue-sonner";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-vue-next";
 import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
 import DeletePageDialog from "@/components/workspace/DeletePageDialog.vue";
 import MovePageDialog from "@/components/workspace/MovePageDialog.vue";
 import RenamePageDialog from "@/components/workspace/RenamePageDialog.vue";
 import SharePageDialog from "@/components/workspace/SharePageDialog.vue";
+import { usePageActions } from "@/composables/usePageActions";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,69 +22,22 @@ const props = defineProps<{
   flatPages: CollectivePage[];
 }>();
 
-const { createPage, updatePage, deletePage } = useCollectivePages(() => props.collectiveId);
-
-const createOpen = ref(false);
-
-const renameOpen = ref(false);
-
-const moveOpen = ref(false);
-
-const deleteOpen = ref(false);
-
-const shareOpen = ref(false);
-
-const moveOptions = computed(() =>
-  props.flatPages
-    .filter((candidate) => candidate.id !== props.page.id)
-    .map((candidate) => ({
-      id: candidate.id,
-      label: candidate.title,
-    })),
+const {
+  createOpen,
+  renameOpen,
+  moveOpen,
+  deleteOpen,
+  shareOpen,
+  moveOptions,
+  handleCreate,
+  handleRename,
+  handleMove,
+  handleDelete,
+} = usePageActions(
+  () => props.collectiveId,
+  () => props.page,
+  () => props.flatPages,
 );
-
-function toMessage(error: unknown) {
-  return extractApiErrorMessage(error);
-}
-
-async function handleCreate(title: string) {
-  try {
-    const page = await createPage({ title, parentId: resolveCreateParentId(props.page) });
-
-    toast.success("Unterseite erstellt");
-    await navigateTo(`/app/${props.collectiveId}/${page.id}`);
-  } catch (error) {
-    toast.error(toMessage(error));
-  }
-}
-
-async function handleRename(title: string) {
-  try {
-    await updatePage(props.page.id, { title });
-    toast.success("Seite umbenannt");
-  } catch (error) {
-    toast.error(toMessage(error));
-  }
-}
-
-async function handleMove(payload: { parentId: number | null; index: number }) {
-  try {
-    await updatePage(props.page.id, payload);
-    toast.success("Seite verschoben");
-  } catch (error) {
-    toast.error(toMessage(error));
-  }
-}
-
-async function handleDelete() {
-  try {
-    await deletePage(props.page.id);
-    toast.success("Seite gelöscht");
-    await navigateTo(`/app/${props.collectiveId}`);
-  } catch (error) {
-    toast.error(toMessage(error));
-  }
-}
 </script>
 
 <template>
