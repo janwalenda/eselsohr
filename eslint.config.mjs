@@ -41,4 +41,21 @@ export default withNuxt(eslintConfigPrettier, {
   .append({
     files: ["app/components/ui/**/*.vue"],
     rules: { "vue/max-lines-per-block": "off" },
+  })
+  .append({
+    files: [
+      "app/components/workspace/diagram/**/*.vue",
+      "app/components/workspace/DiagramBuilderDialog.vue",
+    ],
+    rules: {
+      "vue/max-lines-per-block": [
+        "error",
+        {
+          script: 100,
+          template: 140,
+          style: 80,
+          skipBlankLines: true,
+        },
+      ],
+    },
   });

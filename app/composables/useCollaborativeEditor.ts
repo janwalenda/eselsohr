@@ -16,6 +16,9 @@ import WikiLinkSuggestionList from "@/components/workspace/WikiLinkSuggestionLis
 import { colorForName, useTextEditorStatus } from "@/composables/useTextEditorStatus";
 import { useTextEditorSourceMode } from "@/composables/useTextEditorSourceMode";
 import { useTextEditorCommands } from "@/composables/useTextEditorCommands";
+import type { EditDiagramPayload } from "@/lib/nc-text/editor/MermaidCodeBlock";
+import { emptyModel } from "@/lib/mermaid/types";
+import { serializeDiagram } from "@/lib/mermaid/serialize";
 
 export function useCollaborativeEditor(options: {
   collectiveId: MaybeRefOrGetter<number>;
@@ -44,6 +47,13 @@ export function useCollaborativeEditor(options: {
 
   const sourceRemoteStale = ref(false);
 
+  const diagramDialog = reactive({
+    open: false,
+    mode: "insert" as "insert" | "edit",
+    source: "",
+    pos: null as number | null,
+  });
+
   const wikiLinkSuggestionRender = createWikiLinkSuggestionRender(WikiLinkSuggestionList);
 
   const markDirty = () => session.scheduleSave();
@@ -51,6 +61,20 @@ export function useCollaborativeEditor(options: {
   const sourceMode = useTextEditorSourceMode(sourceMarkdown, markDirty);
 
   const { lastCollaborator, editorStatus, statusIconClass } = useTextEditorStatus(session);
+
+  function openDiagramBuilder(mode: "insert" | "edit", source = "", pos: number | null = null) {
+    diagramDialog.mode = mode;
+    diagramDialog.source =
+      source || (mode === "insert" ? serializeDiagram(emptyModel("flowchart")) : "");
+    diagramDialog.pos = pos;
+    diagramDialog.open = true;
+  }
+
+  function handleEditDiagram(payload: EditDiagramPayload) {
+    const pos = payload.getPos();
+
+    openDiagramBuilder("edit", payload.source, typeof pos === "number" ? pos : null);
+  }
 
   function buildEditorExtensions() {
     return buildExtensions({
@@ -61,6 +85,7 @@ export function useCollaborativeEditor(options: {
       pages: toValue(pages) ?? [],
       enableWikiLinkSuggestion: true,
       wikiLinkSuggestion: { render: wikiLinkSuggestionRender },
+      onEditDiagram: handleEditDiagram,
     });
   }
 
@@ -208,7 +233,33 @@ export function useCollaborativeEditor(options: {
     apiFetch,
     collectiveId,
     pageId,
+    openDiagramBuilder,
   });
+
+  function confirmDiagram(source: string) {
+    const ed = editor.value;
+
+    if (diagramDialog.mode === "edit" && ed && diagramDialog.pos !== null) {
+      const pos = diagramDialog.pos;
+
+      const current = ed.state.doc.nodeAt(pos);
+
+      if (current?.type.name === "codeBlock") {
+        const nextNode = ed.schema.nodes.codeBlock!.create(
+          { language: "mermaid" },
+          source ? ed.schema.text(source) : undefined,
+        );
+
+        const tr = ed.state.tr.replaceWith(pos, pos + current.nodeSize, nextNode);
+
+        ed.view.dispatch(tr);
+        session.scheduleSave();
+        return;
+      }
+    }
+
+    commands.insertMermaidSource(source);
+  }
 
   function switchViewMode(next: ViewMode) {
     if (next === viewMode.value) {
@@ -324,6 +375,8 @@ export function useCollaborativeEditor(options: {
     showFormattingToolbar,
     switchViewMode,
     commands,
+    diagramDialog,
+    confirmDiagram,
     scheduleSave: () => session.scheduleSave(),
   };
 }

@@ -17,6 +17,7 @@ import {
   StrikethroughIcon,
   TableIcon,
   UndoIcon,
+  WorkflowIcon,
 } from "lucide-vue-next";
 
 export type TextEditorCommands = {
@@ -33,6 +34,7 @@ export type TextEditorCommands = {
   promptLink: () => void;
   insertImageAction: () => void;
   insertTableAction: () => void;
+  insertDiagramAction: () => void;
   undo: () => void;
   redo: () => void;
 };
@@ -126,6 +128,7 @@ export function buildToolbarActions(options: {
     { key: "link", icon: LinkIcon, action: commands.promptLink, separatorBefore: true },
     { key: "image", icon: ImageIcon, action: commands.insertImageAction },
     { key: "table", icon: TableIcon, action: commands.insertTableAction },
+    { key: "diagram", icon: WorkflowIcon, action: commands.insertDiagramAction },
     {
       key: "undo",
       icon: UndoIcon,
