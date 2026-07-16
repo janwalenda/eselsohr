@@ -90,10 +90,7 @@ export async function usePageEditorPanel(
     editorKey.value += 1;
   }
 
-  async function handleWikiLinkClick(payload: {
-    target: string;
-    resolvedPageId: number | null;
-  }) {
+  async function handleWikiLinkClick(payload: { target: string; resolvedPageId: number | null }) {
     if (payload.resolvedPageId) {
       await navigateTo(`/app/${toValue(collectiveId)}/${payload.resolvedPageId}`);
       return;
