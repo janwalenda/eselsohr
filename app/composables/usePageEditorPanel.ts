@@ -28,8 +28,6 @@ export async function usePageEditorPanel(
     () => toValue(pageId),
   );
 
-  await pageState;
-
   const { properties, setProperties } = pageState;
 
   const pageKey = computed(() => `${toValue(collectiveId)}:${toValue(pageId)}`);
@@ -52,6 +50,8 @@ export async function usePageEditorPanel(
         .catch(() => [] as string[]),
     { default: () => [] as string[] },
   );
+
+  await pageState;
 
   const pagePayload = computed(() => pageState.data.value);
 
@@ -90,7 +90,10 @@ export async function usePageEditorPanel(
     editorKey.value += 1;
   }
 
-  async function handleWikiLinkClick(payload: { target: string; resolvedPageId: number | null }) {
+  async function handleWikiLinkClick(payload: {
+    target: string;
+    resolvedPageId: number | null;
+  }) {
     if (payload.resolvedPageId) {
       await navigateTo(`/app/${toValue(collectiveId)}/${payload.resolvedPageId}`);
       return;
