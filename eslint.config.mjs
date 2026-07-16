@@ -27,10 +27,6 @@ export default withNuxt(eslintConfigPrettier, {
       "vue/html-button-has-type": "error",
       "vue/multi-word-component-names": "off",
       "vue/require-default-prop": "off",
-    },
-  })
-  .override("nuxt/vue/rules", {
-    rules: {
       "vue/max-lines-per-block": [
         "error",
         {

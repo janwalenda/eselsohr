@@ -47,6 +47,10 @@ const {
   emit,
 });
 
+function setSourceEditorRef(el: HTMLDivElement | null) {
+  sourceEditorRef.value = el;
+}
+
 defineExpose({
   session,
   scheduleSave,
@@ -102,7 +106,7 @@ defineExpose({
       :editor="editor"
       :toolbar-disabled="toolbarDisabled"
       :source-editor-ref="sourceEditorRef"
-      @update:source-editor-ref="sourceEditorRef = $event"
+      @update:source-editor-ref="setSourceEditorRef"
       @source-input="onSourceInput"
     />
   </div>
