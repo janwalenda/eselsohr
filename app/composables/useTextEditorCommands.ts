@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/vue-3";
 import { TextSelection } from "@tiptap/pm/state";
 import {
+  insertAtCursor,
   insertImage,
   insertLink,
   insertTable,
@@ -22,8 +23,17 @@ export function useTextEditorCommands(options: {
   apiFetch: ApiFetch;
   collectiveId: MaybeRefOrGetter<number>;
   pageId: MaybeRefOrGetter<number>;
+  openDiagramBuilder?: (mode: "insert" | "edit", source?: string, pos?: number | null) => void;
 }) {
-  const { editor, isSourceMode, applySourceEdit, apiFetch, collectiveId, pageId } = options;
+  const {
+    editor,
+    isSourceMode,
+    applySourceEdit,
+    apiFetch,
+    collectiveId,
+    pageId,
+    openDiagramBuilder,
+  } = options;
 
   function toggleBold() {
     if (isSourceMode.value) {
@@ -223,6 +233,29 @@ export function useTextEditorCommands(options: {
     editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
   }
 
+  function insertDiagramAction() {
+    openDiagramBuilder?.("insert");
+  }
+
+  function insertMermaidSource(source: string) {
+    const fenced = `\n\`\`\`mermaid\n${source.trim()}\n\`\`\`\n`;
+
+    if (isSourceMode.value) {
+      applySourceEdit((textarea) => insertAtCursor(textarea, fenced));
+      return;
+    }
+
+    editor.value
+      ?.chain()
+      .focus()
+      .insertContent({
+        type: "codeBlock",
+        attrs: { language: "mermaid" },
+        content: [{ type: "text", text: source.trim() }],
+      })
+      .run();
+  }
+
   function undo() {
     editor.value?.chain().focus().undo().run();
   }
@@ -245,6 +278,8 @@ export function useTextEditorCommands(options: {
     promptLink,
     insertImageAction,
     insertTableAction,
+    insertDiagramAction,
+    insertMermaidSource,
     undo,
     redo,
   };
