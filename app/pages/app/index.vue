@@ -8,7 +8,7 @@ definePageMeta({
 
 const { collectives, pending, error } = useCollectives();
 
-const { createOpen, handleCreateCollective } = useCreateCollective();
+const { createOpen, creating, handleCreateCollective } = useCreateCollective();
 </script>
 
 <template>
@@ -59,6 +59,10 @@ const { createOpen, handleCreateCollective } = useCreateCollective();
       </div>
     </Card>
 
-    <CreateCollectiveDialog v-model:open="createOpen" @submit="handleCreateCollective" />
+    <CreateCollectiveDialog
+      v-model:open="createOpen"
+      :pending="creating"
+      @submit="handleCreateCollective"
+    />
   </div>
 </template>

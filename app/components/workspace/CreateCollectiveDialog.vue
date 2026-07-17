@@ -12,9 +12,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const props = defineProps<{
-  open: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    pending?: boolean;
+  }>(),
+  {
+    pending: false,
+  },
+);
 
 const emit = defineEmits<{
   "update:open": [value: boolean];
@@ -50,7 +56,6 @@ function handleSubmit() {
     name: trimmedName,
     emoji: emoji.value.trim() || null,
   });
-  close();
 }
 </script>
 
@@ -87,8 +92,10 @@ function handleSubmit() {
       </div>
 
       <DialogFooter>
-        <Button @click="close"> Abbrechen </Button>
-        <Button @click="handleSubmit"> Erstellen </Button>
+        <Button :disabled="pending" @click="close"> Abbrechen </Button>
+        <Button :disabled="pending" @click="handleSubmit">
+          {{ pending ? "Wird erstellt…" : "Erstellen" }}
+        </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

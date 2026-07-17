@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { LogOutIcon, PlusIcon, SearchIcon } from "lucide-vue-next";
-import CollectiveSidebarGroup from "@/components/workspace/CollectiveSidebarGroup.vue";
-import CreateCollectiveDialog from "@/components/workspace/CreateCollectiveDialog.vue";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LogOutIcon, SearchIcon } from "lucide-vue-next";
+import CollectivesSidebarSection from "@/components/workspace/CollectivesSidebarSection.vue";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -33,26 +30,6 @@ watch(
 );
 
 const { session, signOut } = useNcSession();
-
-const { collectives, pending, error } = useCollectives();
-
-const { createOpen, handleCreateCollective } = useCreateCollective();
-
-const currentCollectiveId = computed(() => Number(route.params.collectiveId));
-
-const activePageId = computed(() => {
-  const pageId = Number(route.params.pageId);
-
-  return Number.isFinite(pageId) ? pageId : null;
-});
-
-const isGraphView = computed(() => {
-  if (!Number.isFinite(currentCollectiveId.value)) {
-    return false;
-  }
-
-  return /^\/app\/\d+\/graph\/?$/.test(route.path);
-});
 
 const nextcloudHost = computed(() => {
   if (!session.value) {
@@ -110,38 +87,7 @@ function openQuickSwitcher() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarGroup>
-        <SidebarGroupLabel>Collectives</SidebarGroupLabel>
-        <SidebarGroupAction as="button" title="Collective anlegen" @click="createOpen = true">
-          <PlusIcon class="size-4" />
-          <span class="sr-only">Collective anlegen</span>
-        </SidebarGroupAction>
-        <SidebarGroupContent>
-          <SidebarMenu v-if="pending">
-            <SidebarMenuItem>
-              <Skeleton class="h-8 w-full" />
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <Skeleton class="h-8 w-5/6" />
-            </SidebarMenuItem>
-          </SidebarMenu>
-
-          <div v-else-if="error" class="px-2 text-sm text-destructive">
-            {{ error.message }}
-          </div>
-
-          <SidebarMenu v-else>
-            <CollectiveSidebarGroup
-              v-for="collective in collectives"
-              :key="collective.id"
-              :collective="collective"
-              :is-active="currentCollectiveId === collective.id"
-              :active-page-id="currentCollectiveId === collective.id ? activePageId : null"
-              :is-graph-view="currentCollectiveId === collective.id && isGraphView"
-            />
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <CollectivesSidebarSection />
     </SidebarContent>
 
     <SidebarFooter>
@@ -155,6 +101,5 @@ function openQuickSwitcher() {
       </SidebarMenu>
     </SidebarFooter>
     <SidebarRail />
-    <CreateCollectiveDialog v-model:open="createOpen" @submit="handleCreateCollective" />
   </Sidebar>
 </template>
