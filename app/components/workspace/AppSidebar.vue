@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { LogOutIcon, SearchIcon } from "lucide-vue-next";
+import { LogOutIcon, PlusIcon, SearchIcon } from "lucide-vue-next";
 import CollectiveSidebarGroup from "@/components/workspace/CollectiveSidebarGroup.vue";
+import CreateCollectiveDialog from "@/components/workspace/CreateCollectiveDialog.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -33,6 +35,8 @@ watch(
 const { session, signOut } = useNcSession();
 
 const { collectives, pending, error } = useCollectives();
+
+const { createOpen, handleCreateCollective } = useCreateCollective();
 
 const currentCollectiveId = computed(() => Number(route.params.collectiveId));
 
@@ -108,6 +112,10 @@ function openQuickSwitcher() {
 
       <SidebarGroup>
         <SidebarGroupLabel>Collectives</SidebarGroupLabel>
+        <SidebarGroupAction as="button" title="Collective anlegen" @click="createOpen = true">
+          <PlusIcon class="size-4" />
+          <span class="sr-only">Collective anlegen</span>
+        </SidebarGroupAction>
         <SidebarGroupContent>
           <SidebarMenu v-if="pending">
             <SidebarMenuItem>
@@ -147,5 +155,6 @@ function openQuickSwitcher() {
       </SidebarMenu>
     </SidebarFooter>
     <SidebarRail />
+    <CreateCollectiveDialog v-model:open="createOpen" @submit="handleCreateCollective" />
   </Sidebar>
 </template>

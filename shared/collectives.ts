@@ -40,6 +40,11 @@ export type PageContentPayload = {
   etag: string | null;
 };
 
+export type CreateCollectiveInput = {
+  name: string;
+  emoji?: string | null;
+};
+
 export type CreatePageInput = {
   title: string;
   parentId?: number;

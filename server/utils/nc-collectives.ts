@@ -3,6 +3,7 @@ import type {
   CollectivePage,
   CollectivePageNode,
   CollectiveSummary,
+  CreateCollectiveInput,
   CreatePageInput,
   UpdatePageInput,
 } from "../../shared/collectives";
@@ -14,13 +15,19 @@ type OcsResponse<T> = {
   };
 };
 
+type NcCollective = {
+  id: number;
+  name: string;
+  emoji?: string | null;
+  canEdit?: boolean;
+};
+
 type NcCollectiveResponse = {
-  collectives?: Array<{
-    id: number;
-    name: string;
-    emoji?: string | null;
-    canEdit?: boolean;
-  }>;
+  collectives?: NcCollective[];
+};
+
+type NcCreateCollectiveResponse = {
+  collective?: NcCollective;
 };
 
 type NcPageResponse = {
@@ -138,6 +145,39 @@ export async function listCollectives(event: H3Event) {
   );
 
   return withPaths;
+}
+
+export async function createCollective(event: H3Event, input: CreateCollectiveInput) {
+  const name = input.name.trim();
+
+  const requestBody: Record<string, unknown> = { name };
+
+  if (input.emoji) {
+    requestBody.emoji = input.emoji;
+  }
+
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(event, "/collectives", {
+    method: "POST",
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!data.collective) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the created collective",
+    });
+  }
+
+  const collective = data.collective;
+
+  return {
+    id: collective.id,
+    name: collective.name,
+    emoji: collective.emoji ?? null,
+    canEdit: collective.canEdit ?? true,
+    slug: slugifyCollectiveName(collective.name),
+    path: null,
+  } satisfies CollectiveSummary;
 }
 
 export async function listPages(event: H3Event, collectiveId: number) {

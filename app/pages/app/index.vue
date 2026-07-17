@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import CreateCollectiveDialog from "@/components/workspace/CreateCollectiveDialog.vue";
+import { Button } from "@/components/ui/button";
+
 definePageMeta({
   layout: "workspace",
 });
 
 const { collectives, pending, error } = useCollectives();
+
+const { createOpen, handleCreateCollective } = useCreateCollective();
 </script>
 
 <template>
@@ -45,10 +50,15 @@ const { collectives, pending, error } = useCollectives();
           </NuxtLink>
         </div>
 
-        <p v-else class="text-sm text-muted-foreground">
-          Auf dieser Instanz wurden noch keine Collectives gefunden.
-        </p>
+        <div v-else class="space-y-3">
+          <p class="text-sm text-muted-foreground">
+            Auf dieser Instanz wurden noch keine Collectives gefunden.
+          </p>
+          <Button @click="createOpen = true">Collective erstellen</Button>
+        </div>
       </div>
     </Card>
+
+    <CreateCollectiveDialog v-model:open="createOpen" @submit="handleCreateCollective" />
   </div>
 </template>
