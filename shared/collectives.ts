@@ -4,6 +4,10 @@ export type CollectiveSummary = {
   id: number;
   name: string;
   emoji?: string | null;
+  /** Prefixed icon string (`emoji:…` / `lucide:…` / `image:…`). */
+  icon?: string | null;
+  /** Page whose attachment folder hosts an image icon (for proxy URLs). */
+  iconOwnerPageId?: number | null;
   slug: string;
   path?: string | null;
   canEdit?: boolean;
@@ -19,6 +23,8 @@ export type CollectivePage = {
   id: number;
   title: string;
   emoji?: string | null;
+  /** Prefixed icon string (`emoji:…` / `lucide:…` / `image:…`). */
+  icon?: string | null;
   parentId: number;
   subpageOrder: number[];
   timestamp: number;
@@ -49,11 +55,13 @@ export type PageContentPayload = {
 export type CreateCollectiveInput = {
   name: string;
   emoji?: string | null;
+  icon?: string | null;
 };
 
 export type UpdateCollectiveInput = {
   name?: string;
   emoji?: string | null;
+  icon?: string | null;
   editLevel?: number;
   shareLevel?: number;
   pageMode?: number;
@@ -141,6 +149,8 @@ export function buildCollectiveSummary(
     id: number;
     name: string;
     emoji?: string | null;
+    icon?: string | null;
+    iconOwnerPageId?: number | null;
     canEdit?: boolean;
     circleId?: string;
     level?: number;
@@ -155,6 +165,8 @@ export function buildCollectiveSummary(
     id: collective.id,
     name: collective.name,
     emoji: collective.emoji ?? null,
+    icon: collective.icon ?? null,
+    iconOwnerPageId: collective.iconOwnerPageId ?? null,
     canEdit: collective.canEdit ?? false,
     slug: slugifyCollectiveName(collective.name),
     path,
@@ -170,6 +182,7 @@ export function buildCollectiveSummary(
 export type CreatePageInput = {
   title: string;
   parentId?: number;
+  icon?: string | null;
 };
 
 export type UpdatePageInput = {
@@ -184,6 +197,12 @@ export function isLandingPage(
   page: Pick<CollectivePage, "fileName" | "filePath" | "parentId">,
 ): boolean {
   return page.fileName === "Readme.md" && !page.filePath?.trim() && page.parentId === 0;
+}
+
+export function findLandingPage<
+  T extends Pick<CollectivePage, "fileName" | "filePath" | "parentId">,
+>(pages: T[]): T | null {
+  return pages.find((page) => isLandingPage(page)) ?? null;
 }
 
 export function resolveCreateParentId(

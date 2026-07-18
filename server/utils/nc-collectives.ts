@@ -6,8 +6,14 @@ import type {
   CreatePageInput,
   UpdatePageInput,
 } from "../../shared/collectives";
-import { buildCollectiveSummary } from "../../shared/collectives";
+import { buildCollectiveSummary, validateCollectiveEmoji } from "../../shared/collectives";
+import { iconFromEmoji, parseIcon, serializeIcon } from "../../shared/icons";
 import { ncFetchJson } from "./nc-api";
+import {
+  getCollectiveIconsMap,
+  getCollectiveLevelIcons,
+  type PageIconRecord,
+} from "./page-icons-db";
 
 type OcsResponse<T> = {
   ocs?: {
@@ -125,37 +131,94 @@ export function buildPageTree(pages: CollectivePage[]) {
   return roots;
 }
 
+function applyPageIcons(pages: CollectivePage[], icons: Map<number, PageIconRecord>) {
+  for (const page of pages) {
+    const record = icons.get(page.id);
+
+    if (record) {
+      page.icon = record.icon;
+    } else if (page.emoji) {
+      page.icon = iconFromEmoji(page.emoji);
+    }
+  }
+
+  return pages;
+}
+
 export async function listCollectives(event: H3Event) {
   const data = await collectivesRequest<NcCollectiveResponse>(event, "/collectives");
 
   const collectives = data.collectives ?? [];
+
+  let collectiveIcons = new Map<number, PageIconRecord>();
+
+  try {
+    collectiveIcons = await getCollectiveLevelIcons(event);
+  } catch (error) {
+    // Icon index is best-effort (migration may be missing).
+    console.error("[page-icons] failed to load collective icons:", error);
+  }
 
   const withPaths = await Promise.all(
     collectives.map(async (collective) => {
       let path: string | null = null;
 
       try {
-        const pages = await listPages(event, collective.id);
+        // Avoid recursive icon joins when only the collective path is needed.
+        const pages = await listPagesRaw(event, collective.id);
 
         path = pages.find((page) => page.collectivePath)?.collectivePath ?? null;
       } catch {
         // Ignore collectives we cannot list pages for.
       }
 
-      return buildCollectiveSummary(collective, path);
+      const iconRecord = collectiveIcons.get(collective.id);
+
+      return buildCollectiveSummary(
+        {
+          ...collective,
+          icon: iconRecord?.icon ?? iconFromEmoji(collective.emoji),
+          iconOwnerPageId: iconRecord?.ownerPageId ?? null,
+        },
+        path,
+      );
     }),
   );
 
   return withPaths;
 }
 
+function resolveNcEmojiFromIcon(icon: string | null | undefined, explicitEmoji?: string | null) {
+  if (explicitEmoji) {
+    return validateCollectiveEmoji(explicitEmoji).valid ? explicitEmoji : null;
+  }
+
+  const parsed = parseIcon(icon);
+
+  if (!parsed || parsed.kind !== "emoji") {
+    return null;
+  }
+
+  return validateCollectiveEmoji(parsed.value).valid ? parsed.value : null;
+}
+
+function normalizeIconInput(icon: string | null | undefined) {
+  const parsed = parseIcon(icon);
+
+  return parsed ? serializeIcon(parsed) : null;
+}
+
 export async function createCollective(event: H3Event, input: CreateCollectiveInput) {
   const name = input.name.trim();
 
+  const icon = normalizeIconInput(input.icon);
+
+  const emoji = resolveNcEmojiFromIcon(icon, input.emoji);
+
   const requestBody: Record<string, unknown> = { name };
 
-  if (input.emoji) {
-    requestBody.emoji = input.emoji;
+  if (emoji) {
+    requestBody.emoji = emoji;
   }
 
   const data = await collectivesRequest<NcCreateCollectiveResponse>(event, "/collectives", {
@@ -170,7 +233,15 @@ export async function createCollective(event: H3Event, input: CreateCollectiveIn
     });
   }
 
-  return buildCollectiveSummary(data.collective, null);
+  return buildCollectiveSummary(
+    {
+      ...data.collective,
+      emoji: emoji ?? data.collective.emoji ?? null,
+      icon,
+      iconOwnerPageId: null,
+    },
+    null,
+  );
 }
 
 export async function updateCollectiveEmoji(
@@ -241,7 +312,7 @@ export async function trashCollective(event: H3Event, collectiveId: number) {
   return buildCollectiveSummary(requireCollective(data, "trashed"));
 }
 
-export async function listPages(event: H3Event, collectiveId: number) {
+async function listPagesRaw(event: H3Event, collectiveId: number) {
   const data = await collectivesRequest<NcPagesResponse>(
     event,
     `/collectives/${collectiveId}/pages`,
@@ -250,8 +321,29 @@ export async function listPages(event: H3Event, collectiveId: number) {
   return data.pages ?? [];
 }
 
+export async function listPages(event: H3Event, collectiveId: number) {
+  const pages = await listPagesRaw(event, collectiveId);
+
+  try {
+    const icons = await getCollectiveIconsMap(event, collectiveId);
+
+    return applyPageIcons(pages, icons);
+  } catch (error) {
+    console.error("[page-icons] failed to load page icons:", error);
+    return applyPageIcons(pages, new Map());
+  }
+}
+
 export async function listPageTree(event: H3Event, collectiveId: number) {
   return buildPageTree(await listPages(event, collectiveId));
+}
+
+/** Attach indexed icons to an already-fetched page list (e.g. public shares). */
+export function attachPageIcons(
+  pages: CollectivePage[],
+  icons: Map<number, PageIconRecord>,
+): CollectivePage[] {
+  return applyPageIcons(pages, icons);
 }
 
 export async function getPage(event: H3Event, collectiveId: number, pageId: number) {
@@ -262,6 +354,22 @@ export async function getPage(event: H3Event, collectiveId: number, pageId: numb
 
   if (!data.page) {
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
+  }
+
+  try {
+    const icons = await getCollectiveIconsMap(event, collectiveId);
+
+    const record = icons.get(pageId);
+
+    if (record) {
+      data.page.icon = record.icon;
+    } else if (data.page.emoji) {
+      data.page.icon = iconFromEmoji(data.page.emoji);
+    }
+  } catch {
+    if (data.page.emoji) {
+      data.page.icon = iconFromEmoji(data.page.emoji);
+    }
   }
 
   return data.page;
@@ -292,6 +400,12 @@ export async function createPage(event: H3Event, collectiveId: number, input: Cr
       statusCode: 502,
       statusMessage: "Nextcloud did not return the created page",
     });
+  }
+
+  const icon = normalizeIconInput(input.icon);
+
+  if (icon) {
+    data.page.icon = icon;
   }
 
   return data.page;

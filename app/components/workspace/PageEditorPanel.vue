@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "@/components/AppIcon.vue";
 import PageActions from "@/components/workspace/PageActions.vue";
 import PageBreadcrumb from "@/components/workspace/PageBreadcrumb.vue";
 import PagePropertiesPanel from "@/components/workspace/PagePropertiesPanel.vue";
@@ -26,6 +27,7 @@ const {
   currentTrail,
   displayPage,
   displayTitle,
+  isDisplayLandingPage,
   routeErrorMessage,
   userName,
   editorKey,
@@ -58,7 +60,24 @@ const {
       <template v-else-if="pagePayload && displayPage">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight">
+            <h1 class="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+              <AppIcon
+                v-if="isDisplayLandingPage && currentCollective"
+                :icon="currentCollective.icon"
+                :collective-id="currentCollective.id"
+                :owner-page-id="currentCollective.iconOwnerPageId"
+                :fallback-emoji="currentCollective.emoji"
+                fallback-lucide="folder-open"
+                size="lg"
+              />
+              <AppIcon
+                v-else-if="displayPage"
+                :icon="displayPage.icon"
+                :collective-id="collectiveId"
+                :owner-page-id="displayPage.id"
+                fallback-lucide="file-text"
+                size="lg"
+              />
               {{ displayTitle }}
             </h1>
           </div>

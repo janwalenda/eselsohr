@@ -67,14 +67,18 @@ export async function usePageEditorPanel(
 
   const displayTitle = computed(() => {
     const page = pagePayload.value?.page;
-
     const collective = currentCollective.value;
 
     if (page && collective && isLandingPage(page)) {
-      return collective.emoji ? `${collective.emoji} ${collective.name}` : collective.name;
+      return collective.name;
     }
 
     return displayPage.value?.title ?? "";
+  });
+
+  const isDisplayLandingPage = computed(() => {
+    const page = pagePayload.value?.page;
+    return Boolean(page && isLandingPage(page));
   });
 
   const routeErrorMessage = computed(
@@ -130,6 +134,7 @@ export async function usePageEditorPanel(
     currentTrail,
     displayPage,
     displayTitle,
+    isDisplayLandingPage,
     routeErrorMessage,
     userName,
     editorKey,

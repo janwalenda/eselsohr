@@ -3,11 +3,19 @@ import type { CollectivePage } from "~~/shared/collectives";
 import { MoreHorizontalIcon, PlusIcon } from "lucide-vue-next";
 import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
 import DeletePageDialog from "@/components/workspace/DeletePageDialog.vue";
+import IconPicker from "@/components/workspace/IconPicker.vue";
 import MovePageDialog from "@/components/workspace/MovePageDialog.vue";
 import RenamePageDialog from "@/components/workspace/RenamePageDialog.vue";
 import SharePageDialog from "@/components/workspace/SharePageDialog.vue";
 import { usePageActions } from "@/composables/usePageActions";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,11 +36,14 @@ const {
   moveOpen,
   deleteOpen,
   shareOpen,
+  iconOpen,
+  pageIcon,
   moveOptions,
   handleCreate,
   handleRename,
   handleMove,
   handleDelete,
+  handleSaveIcon,
 } = usePageActions(
   () => props.collectiveId,
   () => props.page,
@@ -58,6 +69,7 @@ const {
         <DropdownMenuItem @select.prevent="createOpen = true">
           Unterseite erstellen
         </DropdownMenuItem>
+        <DropdownMenuItem @select.prevent="iconOpen = true"> Icon ändern </DropdownMenuItem>
         <DropdownMenuItem @select.prevent="renameOpen = true"> Umbenennen </DropdownMenuItem>
         <DropdownMenuItem @select.prevent="moveOpen = true"> Verschieben </DropdownMenuItem>
         <DropdownMenuItem @select.prevent="shareOpen = true"> Öffentlich teilen </DropdownMenuItem>
@@ -71,6 +83,7 @@ const {
     <CreatePageDialog
       v-model:open="createOpen"
       :context-label="page.title"
+      :collective-id="collectiveId"
       @submit="handleCreate"
     />
     <RenamePageDialog
@@ -86,5 +99,17 @@ const {
     />
     <DeletePageDialog v-model:open="deleteOpen" :title="page.title" @submit="handleDelete" />
     <SharePageDialog v-model:open="shareOpen" :collective-id="collectiveId" :page="page" />
+
+    <Dialog v-model:open="iconOpen">
+      <DialogContent class="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Seiten-Icon</DialogTitle>
+        </DialogHeader>
+        <IconPicker v-model="pageIcon" :collective-id="collectiveId" :owner-page-id="page.id" />
+        <DialogFooter>
+          <Button @click="handleSaveIcon(pageIcon)"> Speichern </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

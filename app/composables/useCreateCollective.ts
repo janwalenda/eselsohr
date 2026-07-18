@@ -1,5 +1,6 @@
 import { toast } from "vue-sonner";
 import { extractApiErrorMessage } from "~~/shared/api-errors";
+import { serializeIcon } from "~~/shared/icons";
 
 function createCollectiveErrorMessage(error: unknown): string {
   const message = extractApiErrorMessage(error);
@@ -18,11 +19,17 @@ function createCollectiveErrorMessage(error: unknown): string {
 export function useCreateCollective() {
   const { createCollective } = useCollectives();
 
+  const apiFetch = useApiFetch();
+
   const createOpen = ref(false);
 
   const creating = ref(false);
 
-  async function handleCreateCollective(payload: { name: string; emoji: string | null }) {
+  async function handleCreateCollective(payload: {
+    name: string;
+    icon: string | null;
+    pendingImage: Blob | null;
+  }) {
     if (creating.value) {
       return;
     }
@@ -30,7 +37,47 @@ export function useCreateCollective() {
     creating.value = true;
 
     try {
-      const collective = await createCollective(payload);
+      const collective = await createCollective({
+        name: payload.name,
+        icon: payload.icon,
+      });
+
+      if (payload.pendingImage && collective.iconOwnerPageId == null) {
+        // Resolve landing page for image upload after create.
+        try {
+          const pagesResponse = await apiFetch<{
+            pages: { id: number; fileName: string; filePath: string; parentId: number }[];
+          }>(`/api/collectives/${collective.id}/pages`);
+
+          const { flattenPageTree, findLandingPage } = await import("~~/shared/collectives");
+
+          const landing = findLandingPage(flattenPageTree(pagesResponse.pages));
+
+          if (landing) {
+            const form = new FormData();
+
+            form.append(
+              "file",
+              new File([payload.pendingImage], `icon-${Date.now()}.webp`, {
+                type: "image/webp",
+              }),
+            );
+
+            const uploaded = await apiFetch<{ path: string }>(
+              `/api/collectives/${collective.id}/pages/${landing.id}/attachments`,
+              { method: "POST", body: form },
+            );
+
+            await apiFetch(`/api/collectives/${collective.id}/icon`, {
+              method: "PUT",
+              body: { icon: serializeIcon({ kind: "image", value: uploaded.path }) },
+            });
+          }
+        } catch (error) {
+          console.error("[icons] post-create image icon failed:", error);
+          toast.warning("Collective erstellt, aber Icon-Bild konnte nicht gespeichert werden");
+        }
+      }
 
       createOpen.value = false;
       toast.success("Collective erstellt");

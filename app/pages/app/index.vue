@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppIcon from "@/components/AppIcon.vue";
 import CreateCollectiveDialog from "@/components/workspace/CreateCollectiveDialog.vue";
 import { Button } from "@/components/ui/button";
 
@@ -41,8 +42,15 @@ const { createOpen, creating, handleCreateCollective } = useCreateCollective();
             :to="`/app/${collective.id}`"
             class="rounded-lg border p-4 transition hover:bg-accent hover:text-accent-foreground"
           >
-            <div class="font-medium">
-              {{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}
+            <div class="flex items-center gap-2 font-medium">
+              <AppIcon
+                :icon="collective.icon"
+                :collective-id="collective.id"
+                :owner-page-id="collective.iconOwnerPageId"
+                :fallback-emoji="collective.emoji"
+                fallback-lucide="folder-open"
+              />
+              {{ collective.name }}
             </div>
             <div class="mt-1 text-sm text-muted-foreground">
               {{ collective.slug }}

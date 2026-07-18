@@ -77,6 +77,8 @@ describe("buildCollectiveSummary", () => {
       id: 7,
       name: "Team Alpha",
       emoji: "🐘",
+      icon: null,
+      iconOwnerPageId: null,
       canEdit: true,
       slug: "team-alpha",
       path: "/Collectives/Team Alpha",
@@ -92,6 +94,8 @@ describe("buildCollectiveSummary", () => {
   it("defaults optional booleans and emoji", () => {
     expect(buildCollectiveSummary({ id: 1, name: "Solo" })).toMatchObject({
       emoji: null,
+      icon: null,
+      iconOwnerPageId: null,
       canEdit: false,
       slug: "solo",
       path: null,
@@ -136,7 +140,7 @@ describe("useCollectiveSettingsForm", () => {
     await Promise.resolve();
 
     expect(form.name.value).toBe("Notes");
-    expect(form.emoji.value).toBe("📝");
+    expect(form.icon.value).toBe("emoji:📝");
     expect(form.editLevel.value).toBe(String(COLLECTIVE_MEMBER_LEVELS.moderator));
     expect(form.shareLevel.value).toBe(String(COLLECTIVE_MEMBER_LEVELS.admin));
     expect(form.pageMode.value).toBe(String(COLLECTIVE_PAGE_MODES.view));
@@ -155,14 +159,14 @@ describe("useCollectiveSettingsForm", () => {
     );
 
     form.name.value = "Updated";
-    form.emoji.value = "✨";
+    form.icon.value = "emoji:✨";
     form.editLevel.value = String(COLLECTIVE_MEMBER_LEVELS.admin);
     form.shareLevel.value = String(COLLECTIVE_MEMBER_LEVELS.member);
     form.pageMode.value = String(COLLECTIVE_PAGE_MODES.edit);
 
     expect(form.toInput()).toEqual({
       name: "Updated",
-      emoji: "✨",
+      icon: "emoji:✨",
       editLevel: COLLECTIVE_MEMBER_LEVELS.admin,
       shareLevel: COLLECTIVE_MEMBER_LEVELS.member,
       pageMode: COLLECTIVE_PAGE_MODES.edit,

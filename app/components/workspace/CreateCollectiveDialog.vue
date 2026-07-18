@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { validateCollectiveEmoji } from "~~/shared/collectives";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import IconPicker from "@/components/workspace/IconPicker.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -25,29 +25,25 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   "update:open": [value: boolean];
-  submit: [payload: { name: string; emoji: string | null }];
+  submit: [payload: { name: string; icon: string | null; pendingImage: Blob | null }];
 }>();
 
 const name = ref("");
 
-const emoji = ref("");
+const icon = ref<string | null>(null);
 
-const emojiError = ref("");
+const pendingImage = ref<Blob | null>(null);
 
 watch(
   () => props.open,
   (value) => {
     if (value) {
       name.value = "";
-      emoji.value = "";
-      emojiError.value = "";
+      icon.value = null;
+      pendingImage.value = null;
     }
   },
 );
-
-watch(emoji, () => {
-  emojiError.value = "";
-});
 
 function close() {
   emit("update:open", false);
@@ -60,20 +56,13 @@ function handleSubmit() {
     return;
   }
 
-  const trimmedEmoji = emoji.value.trim() || null;
-
-  const emojiValidation = validateCollectiveEmoji(trimmedEmoji);
-
-  if (!emojiValidation.valid) {
-    emojiError.value = emojiValidation.message;
-    return;
-  }
-
-  emojiError.value = "";
+  const resolvedIcon =
+    icon.value?.startsWith("image:pending") && pendingImage.value ? null : icon.value;
 
   emit("submit", {
     name: trimmedName,
-    emoji: trimmedEmoji,
+    icon: resolvedIcon,
+    pendingImage: pendingImage.value,
   });
 }
 </script>
@@ -100,15 +89,13 @@ function handleSubmit() {
         </div>
 
         <div class="space-y-2">
-          <Label for="create-collective-emoji">Emoji (optional)</Label>
-          <Input
-            id="create-collective-emoji"
-            v-model="emoji"
-            placeholder="🐘"
-            :aria-invalid="Boolean(emojiError)"
-            @keydown.enter.prevent="handleSubmit"
+          <Label>Icon (optional)</Label>
+          <IconPicker
+            v-model="icon"
+            defer-image-upload
+            :disabled="pending"
+            @pending-image="pendingImage = $event"
           />
-          <p v-if="emojiError" class="text-sm text-destructive">{{ emojiError }}</p>
         </div>
       </div>
 

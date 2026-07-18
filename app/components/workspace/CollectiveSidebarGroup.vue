@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CollectiveSummary } from "~~/shared/collectives";
-import { ChevronRightIcon, FolderOpenIcon, GitBranchIcon } from "lucide-vue-next";
+import { ChevronRightIcon, GitBranchIcon } from "lucide-vue-next";
+import AppIcon from "@/components/AppIcon.vue";
 import CollectiveActionsMenu from "@/components/workspace/CollectiveActionsMenu.vue";
 import CollectiveSidebarPages from "@/components/workspace/CollectiveSidebarPages.vue";
 import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
@@ -58,8 +59,14 @@ const {
         :disabled="openingCollective"
         @click="handleCollectiveClick"
       >
-        <FolderOpenIcon class="size-4" />
-        <span>{{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}</span>
+        <AppIcon
+          :icon="collective.icon"
+          :collective-id="collective.id"
+          :owner-page-id="collective.iconOwnerPageId"
+          :fallback-emoji="collective.emoji"
+          fallback-lucide="folder-open"
+        />
+        <span>{{ collective.name }}</span>
       </SidebarMenuButton>
 
       <CollectiveActionsMenu :collective="collective" @create="createOpen = true" />
@@ -85,6 +92,7 @@ const {
     <CreatePageDialog
       v-model:open="createOpen"
       :context-label="collective.name"
+      :collective-id="collective.id"
       @submit="handleCreate"
     />
   </SidebarMenuItem>

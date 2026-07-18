@@ -21,7 +21,15 @@ const DEFAULT_PROPERTY_TYPES: Record<string, PropertyType> = {
   alias: "list",
   cssclasses: "list",
   cssclass: "list",
+  icon: "text",
 };
+
+/** Keys managed by dedicated UI (not shown as generic property rows). */
+export const HIDDEN_PROPERTY_KEYS = new Set(["icon"]);
+
+export function isHiddenPropertyKey(key: string) {
+  return HIDDEN_PROPERTY_KEYS.has(key.trim().toLowerCase());
+}
 
 export function inferPropertyType(key: string, value: PropertyValue): PropertyType {
   const normalizedKey = key.trim().toLowerCase();
@@ -60,11 +68,13 @@ export function shouldInferTypeFromKey(key: string): boolean {
 }
 
 export function propertyDefinitionsFromRecord(properties: PageProperties): PropertyDefinition[] {
-  return Object.entries(properties).map(([key, value]) => ({
-    key,
-    type: inferPropertyType(key, value),
-    value,
-  }));
+  return Object.entries(properties)
+    .filter(([key]) => !isHiddenPropertyKey(key))
+    .map(([key, value]) => ({
+      key,
+      type: inferPropertyType(key, value),
+      value,
+    }));
 }
 
 export function recordFromPropertyDefinitions(definitions: PropertyDefinition[]): PageProperties {

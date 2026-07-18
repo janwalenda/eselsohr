@@ -69,7 +69,11 @@ export function useCollectiveSidebarGroup(
     },
   );
 
-  async function handleCreate(title: string) {
+  async function handleCreate(payload: {
+    title: string;
+    icon: string | null;
+    pendingImage: Blob | null;
+  }) {
     try {
       const rootParentId = landingPageId.value;
 
@@ -77,7 +81,21 @@ export function useCollectiveSidebarGroup(
         throw new Error("Die Landing-Page des Collectives konnte nicht gefunden werden.");
       }
 
-      const page = await createPage({ title, parentId: rootParentId });
+      const apiFetch = useApiFetch();
+
+      const page = await createPage({
+        title: payload.title,
+        parentId: rootParentId,
+        icon: payload.icon,
+      });
+
+      if (payload.pendingImage) {
+        const { finalizeCreatedPageIcon } = await import("@/lib/page-icons");
+
+        await finalizeCreatedPageIcon(apiFetch, toValue(collective).id, page.id, {
+          pendingImage: payload.pendingImage,
+        });
+      }
 
       toast.success("Seite erstellt");
       await navigateTo(`/app/${toValue(collective).id}/${page.id}`);

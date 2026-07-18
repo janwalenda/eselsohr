@@ -1,8 +1,12 @@
-import { validateCollectiveEmoji } from "~~/shared/collectives";
-import { createCollective } from "../../utils/nc-collectives";
+import { findLandingPage, flattenPageTree } from "~~/shared/collectives";
+import { parseIcon, serializeIcon } from "~~/shared/icons";
+import { createCollective, getPage, listPageTree } from "../../utils/nc-collectives";
+import { writePageIcon } from "../../utils/page-icons-write";
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<{ name?: string; emoji?: string | null }>(event);
+  const body = await readBody<{ name?: string; emoji?: string | null; icon?: string | null }>(
+    event,
+  );
 
   const name = body.name?.trim();
 
@@ -10,18 +14,35 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "A name is required" });
   }
 
-  const emoji = body.emoji?.trim() || null;
+  const iconRaw = body.icon?.trim() || (body.emoji?.trim() ? `emoji:${body.emoji.trim()}` : null);
 
-  const emojiValidation = validateCollectiveEmoji(emoji);
+  const parsed = parseIcon(iconRaw);
 
-  if (!emojiValidation.valid) {
-    throw createError({ statusCode: 422, statusMessage: emojiValidation.message });
-  }
+  const icon = parsed ? serializeIcon(parsed) : null;
 
   const collective = await createCollective(event, {
     name,
-    emoji,
+    icon,
+    emoji: body.emoji?.trim() || null,
   });
+
+  if (icon) {
+    try {
+      const tree = await listPageTree(event, collective.id);
+
+      const landing = findLandingPage(flattenPageTree(tree));
+
+      if (landing) {
+        const page = await getPage(event, collective.id, landing.id);
+
+        await writePageIcon(event, collective.id, page, icon);
+        collective.icon = icon;
+        collective.iconOwnerPageId = page.id;
+      }
+    } catch (error) {
+      console.error("[page-icons] failed to write collective icon after create:", error);
+    }
+  }
 
   return { collective };
 });

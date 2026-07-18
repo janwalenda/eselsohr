@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
 import type { CollectiveSummary, UpdateCollectiveInput } from "~~/shared/collectives";
-import {
-  COLLECTIVE_MEMBER_LEVELS,
-  COLLECTIVE_PAGE_MODES,
-  validateCollectiveEmoji,
-} from "~~/shared/collectives";
+import { COLLECTIVE_MEMBER_LEVELS, COLLECTIVE_PAGE_MODES } from "~~/shared/collectives";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import IconPicker from "@/components/workspace/IconPicker.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -31,19 +27,13 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   "update:open": [value: boolean];
-  submit: [payload: UpdateCollectiveInput];
+  submit: [payload: UpdateCollectiveInput & { icon?: string | null }];
 }>();
 
-const { name, emoji, editLevel, shareLevel, pageMode, toInput } = useCollectiveSettingsForm(
+const { name, icon, editLevel, shareLevel, pageMode, toInput } = useCollectiveSettingsForm(
   () => props.collective,
   () => props.open,
 );
-
-const emojiError = ref("");
-
-watch([emoji, () => props.open], () => {
-  emojiError.value = "";
-});
 
 const selectClass =
   "border-input dark:bg-input/30 h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 disabled:opacity-50";
@@ -59,14 +49,6 @@ function handleSubmit() {
     return;
   }
 
-  const emojiValidation = validateCollectiveEmoji(payload.emoji);
-
-  if (!emojiValidation.valid) {
-    emojiError.value = emojiValidation.message;
-    return;
-  }
-
-  emojiError.value = "";
   emit("submit", payload);
 }
 </script>
@@ -77,7 +59,7 @@ function handleSubmit() {
       <DialogHeader>
         <DialogTitle>Collective-Einstellungen</DialogTitle>
         <DialogDescription>
-          Name, Emoji und Berechtigungen für „{{ collective.name }}“ anpassen.
+          Name, Icon und Berechtigungen für „{{ collective.name }}“ anpassen.
         </DialogDescription>
       </DialogHeader>
 
@@ -87,15 +69,13 @@ function handleSubmit() {
           <Input id="collective-settings-name" v-model="name" :disabled="pending" />
         </div>
         <div class="space-y-2">
-          <Label for="collective-settings-emoji">Emoji (optional)</Label>
-          <Input
-            id="collective-settings-emoji"
-            v-model="emoji"
-            placeholder="🐘"
+          <Label>Icon (optional)</Label>
+          <IconPicker
+            v-model="icon"
+            :collective-id="collective.id"
+            :owner-page-id="collective.iconOwnerPageId"
             :disabled="pending"
-            :aria-invalid="Boolean(emojiError)"
           />
-          <p v-if="emojiError" class="text-sm text-destructive">{{ emojiError }}</p>
         </div>
         <div class="space-y-2">
           <Label for="collective-settings-edit-level">Bearbeitungsrecht ab</Label>

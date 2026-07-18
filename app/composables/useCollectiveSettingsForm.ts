@@ -8,7 +8,7 @@ export function useCollectiveSettingsForm(
 ) {
   const name = ref("");
 
-  const emoji = ref("");
+  const icon = ref<string | null>(null);
 
   const editLevel = ref(String(COLLECTIVE_MEMBER_LEVELS.member));
 
@@ -26,7 +26,7 @@ export function useCollectiveSettingsForm(
       const current = toValue(collective);
 
       name.value = current.name;
-      emoji.value = current.emoji ?? "";
+      icon.value = current.icon ?? (current.emoji ? `emoji:${current.emoji}` : null);
       editLevel.value = String(current.editPermissionLevel ?? COLLECTIVE_MEMBER_LEVELS.member);
       shareLevel.value = String(current.sharePermissionLevel ?? COLLECTIVE_MEMBER_LEVELS.admin);
       pageMode.value = String(current.pageMode ?? COLLECTIVE_PAGE_MODES.edit);
@@ -34,7 +34,7 @@ export function useCollectiveSettingsForm(
     { immediate: true },
   );
 
-  function toInput(): UpdateCollectiveInput | null {
+  function toInput(): (UpdateCollectiveInput & { icon?: string | null }) | null {
     const trimmedName = name.value.trim();
 
     if (!trimmedName) {
@@ -43,7 +43,7 @@ export function useCollectiveSettingsForm(
 
     return {
       name: trimmedName,
-      emoji: emoji.value.trim() || null,
+      icon: icon.value,
       editLevel: Number(editLevel.value),
       shareLevel: Number(shareLevel.value),
       pageMode: Number(pageMode.value),
@@ -52,7 +52,7 @@ export function useCollectiveSettingsForm(
 
   return {
     name,
-    emoji,
+    icon,
     editLevel,
     shareLevel,
     pageMode,

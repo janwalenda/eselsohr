@@ -26,7 +26,7 @@ export function useCollectiveActions(collective: MaybeRefOrGetter<CollectiveSumm
 
   const saving = ref(false);
 
-  async function handleSave(input: UpdateCollectiveInput) {
+  async function handleSave(input: UpdateCollectiveInput & { icon?: string | null }) {
     if (saving.value) {
       return;
     }
@@ -36,10 +36,22 @@ export function useCollectiveActions(collective: MaybeRefOrGetter<CollectiveSumm
     try {
       const current = toValue(collective);
 
+      const { icon, ...rest } = input;
+
       const response = await updateCollective(current.id, {
-        ...input,
+        ...rest,
         circleId: current.circleId,
       });
+
+      if (icon !== undefined) {
+        const apiFetch = useApiFetch();
+
+        await apiFetch(`/api/collectives/${current.id}/icon`, {
+          method: "PUT",
+          body: { icon },
+        });
+        await useCollectives().refresh();
+      }
 
       settingsOpen.value = false;
 

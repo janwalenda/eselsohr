@@ -3,6 +3,7 @@ import type { GraphMode, GraphNode } from "~~/shared/graph";
 import { GitBranchIcon, FolderTreeIcon } from "lucide-vue-next";
 import { computed, ref } from "vue";
 import { toast } from "vue-sonner";
+import AppIcon from "@/components/AppIcon.vue";
 import ForceGraphCanvas from "@/components/workspace/ForceGraphCanvas.vue";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -73,9 +74,15 @@ async function handleNodeClick(node: GraphNode) {
   <div class="flex min-h-0 flex-1 flex-col">
     <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
       <div class="min-w-0">
-        <div class="truncate text-sm font-medium">
-          {{ collective?.emoji ? `${collective.emoji} ` : ""
-          }}{{ collective?.name ?? "Collective" }}
+        <div class="flex min-w-0 items-center gap-2 truncate text-sm font-medium">
+          <AppIcon
+            :icon="collective?.icon"
+            :collective-id="collectiveId"
+            :owner-page-id="collective?.iconOwnerPageId"
+            :fallback-emoji="collective?.emoji"
+            fallback-lucide="folder-open"
+          />
+          <span class="truncate">{{ collective?.name ?? "Collective" }}</span>
         </div>
         <div class="truncate text-xs text-muted-foreground">Graph-Ansicht</div>
       </div>

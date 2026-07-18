@@ -17,7 +17,8 @@ const collectiveId = computed(() => Number(route.params.collectiveId));
 
 const { collectives } = useCollectives();
 
-const { pages, pending, error, createPage, landingPage } = useCollectivePages(collectiveId);
+const { pages, pending, error, createPage, landingPage, refreshPages } =
+  useCollectivePages(collectiveId);
 
 const currentCollective = computed(
   () => collectives.value.find((collective) => collective.id === collectiveId.value) ?? null,
@@ -34,7 +35,11 @@ const { settingsOpen, saving, handleSave } = useCollectiveActions(
     },
 );
 
-async function handleCreate(title: string) {
+async function handleCreate(payload: {
+  title: string;
+  icon: string | null;
+  pendingImage: Blob | null;
+}) {
   try {
     const rootParentId = landingPage.value?.id;
 
@@ -42,7 +47,22 @@ async function handleCreate(title: string) {
       throw new Error("Die Landing-Page des Collectives konnte nicht gefunden werden.");
     }
 
-    const page = await createPage({ title, parentId: rootParentId });
+    const apiFetch = useApiFetch();
+
+    const page = await createPage({
+      title: payload.title,
+      parentId: rootParentId,
+      icon: payload.icon,
+    });
+
+    if (payload.pendingImage) {
+      const { finalizeCreatedPageIcon } = await import("@/lib/page-icons");
+
+      await finalizeCreatedPageIcon(apiFetch, collectiveId.value, page.id, {
+        pendingImage: payload.pendingImage,
+      });
+      await refreshPages();
+    }
 
     toast.success("Seite erstellt");
     await navigateTo(`/app/${collectiveId.value}/${page.id}`);
@@ -102,6 +122,7 @@ async function handleCreate(title: string) {
     <CreatePageDialog
       v-model:open="createOpen"
       :context-label="currentCollective?.name || ''"
+      :collective-id="collectiveId"
       @submit="handleCreate"
     />
     <CollectiveSettingsDialog
