@@ -30,6 +30,8 @@ export class HttpProvider {
 
   #syncService: SyncService;
   #processingVersion = 0;
+  /** Set when applying a remote step requires a SyncStep1 recovery. */
+  #recoveryTriggered = false;
   #onOpened: (data: OpenData) => void;
   #onSync: (payload: { steps: Step[] }) => void;
   #updateHandler: (update: Uint8Array, origin: unknown) => void;
@@ -104,13 +106,25 @@ export class HttpProvider {
 
   #processSteps(steps: Step[]) {
     steps.forEach((step) => {
-      this.#processingVersion = step.version;
+      const stepVersion = step.version;
+
+      this.#processingVersion = stepVersion;
+      this.#recoveryTriggered = false;
+
       step.data.forEach((singleStep) => {
         this.#handleMessage(decodeArrayBuffer(singleStep));
       });
-      this.#syncService.version = Math.max(this.#syncService.version, this.#processingVersion);
+
+      // Commit stepVersion on success. Do not bump when this step needed SyncStep1
+      // recovery (incomplete apply). Never commit via #processingVersion after a
+      // recovery path — clearing it to 0 used to make later SyncStep1s look like
+      // normal outbound traffic and left the client stuck behind the server.
+      if (stepVersion > 0 && !this.#recoveryTriggered) {
+        this.#syncService.version = Math.max(this.#syncService.version, stepVersion);
+      }
+
+      this.#processingVersion = 0;
     });
-    this.#processingVersion = 0;
   }
 
   #send(step: Uint8Array) {
@@ -123,10 +137,10 @@ export class HttpProvider {
       return;
     }
 
+    this.#recoveryTriggered = true;
     logger.error(`Failed to process step ${this.#processingVersion}.`, {
       lastSuccessfullyProcessed: this.#syncService.version,
     });
-    this.#processingVersion = 0;
     this.#syncService.sendRecoveryStep(step);
   }
 
