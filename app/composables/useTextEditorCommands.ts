@@ -203,7 +203,44 @@ export function useTextEditorCommands(options: {
             return;
           }
 
-          editor.value?.chain().focus().setImage({ src: path }).run();
+          editor.value
+            ?.chain()
+            .focus()
+            .command(({ state, tr }) => {
+              const { $from } = state.selection;
+
+              if (
+                $from.parent.type.name !== "codeBlock" ||
+                String($from.parent.attrs.language ?? "")
+                  .trim()
+                  .toLowerCase() !== "mermaid"
+              ) {
+                return true;
+              }
+
+              const pos = $from.before($from.depth);
+
+              const node = tr.doc.nodeAt(pos);
+
+              if (!node) {
+                return true;
+              }
+
+              const after = pos + node.nodeSize;
+
+              const paragraph = state.schema.nodes.paragraph?.create();
+
+              if (paragraph) {
+                tr.insert(after, paragraph);
+                tr.setSelection(TextSelection.create(tr.doc, after + 1));
+              } else {
+                tr.setSelection(TextSelection.near(tr.doc.resolve(after)));
+              }
+
+              return true;
+            })
+            .setImage({ src: path })
+            .run();
         })
         .catch(() => {
           const src = window.prompt("Upload fehlgeschlagen. Bild-URL eingeben");
@@ -217,7 +254,44 @@ export function useTextEditorCommands(options: {
             return;
           }
 
-          editor.value?.chain().focus().setImage({ src }).run();
+          editor.value
+            ?.chain()
+            .focus()
+            .command(({ state, tr }) => {
+              const { $from } = state.selection;
+
+              if (
+                $from.parent.type.name !== "codeBlock" ||
+                String($from.parent.attrs.language ?? "")
+                  .trim()
+                  .toLowerCase() !== "mermaid"
+              ) {
+                return true;
+              }
+
+              const pos = $from.before($from.depth);
+
+              const node = tr.doc.nodeAt(pos);
+
+              if (!node) {
+                return true;
+              }
+
+              const after = pos + node.nodeSize;
+
+              const paragraph = state.schema.nodes.paragraph?.create();
+
+              if (paragraph) {
+                tr.insert(after, paragraph);
+                tr.setSelection(TextSelection.create(tr.doc, after + 1));
+              } else {
+                tr.setSelection(TextSelection.near(tr.doc.resolve(after)));
+              }
+
+              return true;
+            })
+            .setImage({ src })
+            .run();
         });
     };
 
