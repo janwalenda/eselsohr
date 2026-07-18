@@ -1,6 +1,4 @@
-import { COLLECTIVES_WRITE_AUTH_ERROR_CODE } from "../../../../shared/api-errors";
-import { normalizeNcUrl } from "../../../utils/nc-api";
-import { validateCollectivesWriteAccess } from "../../../utils/nc-auth-validation";
+import { hasCollectivesCapability, normalizeNcUrl } from "../../../utils/nc-api";
 import { promoteToActive } from "../../../utils/nc-session";
 
 export default defineEventHandler(async (event) => {
@@ -30,17 +28,13 @@ export default defineEventHandler(async (event) => {
     appPassword,
   };
 
-  const validation = await validateCollectivesWriteAccess(credentials);
+  const hasCollectives = await hasCollectivesCapability(credentials);
 
-  if (!validation.ok) {
+  if (!hasCollectives) {
     throw createError({
-      statusCode: validation.reason === "no_collectives_app" ? 412 : 422,
-      statusMessage: validation.message,
-      data: {
-        code: COLLECTIVES_WRITE_AUTH_ERROR_CODE,
-        reason: validation.reason,
-        fallback: "manual",
-      },
+      statusCode: 412,
+      statusMessage:
+        "Auf dieser Nextcloud-Instanz ist die Collectives-App nicht installiert oder nicht aktiv.",
     });
   }
 

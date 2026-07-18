@@ -1,3 +1,4 @@
+import { validateCollectiveEmoji } from "~~/shared/collectives";
 import { createCollective } from "../../utils/nc-collectives";
 
 export default defineEventHandler(async (event) => {
@@ -10,6 +11,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const emoji = body.emoji?.trim() || null;
+
+  const emojiValidation = validateCollectiveEmoji(emoji);
+
+  if (!emojiValidation.valid) {
+    throw createError({ statusCode: 422, statusMessage: emojiValidation.message });
+  }
 
   const collective = await createCollective(event, {
     name,

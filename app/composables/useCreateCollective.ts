@@ -9,7 +9,7 @@ function createCollectiveErrorMessage(error: unknown): string {
   }
 
   if (/collective already exists/i.test(message)) {
-    return "Ein Collective mit diesem Namen existiert bereits.";
+    return "Ein Collective mit diesem Namen existiert bereits — auch wenn es im Nextcloud-Papierkorb liegt. Bitte einen anderen Namen wählen oder das alte Collective dort endgültig löschen.";
   }
 
   return message;

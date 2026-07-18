@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { CollectiveSummary } from "~~/shared/collectives";
-import { FilePlus2Icon, ChevronRightIcon, FolderOpenIcon, GitBranchIcon } from "lucide-vue-next";
+import { ChevronRightIcon, FolderOpenIcon, GitBranchIcon } from "lucide-vue-next";
+import CollectiveActionsMenu from "@/components/workspace/CollectiveActionsMenu.vue";
 import CollectiveSidebarPages from "@/components/workspace/CollectiveSidebarPages.vue";
 import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
 import { useCollectiveSidebarGroup } from "@/composables/useCollectiveSidebarGroup";
 import { Button } from "@/components/ui/button";
 import {
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -62,10 +62,7 @@ const {
         <span>{{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}</span>
       </SidebarMenuButton>
 
-      <SidebarMenuAction @click="createOpen = true">
-        <FilePlus2Icon class="size-4" />
-        <span class="sr-only">Seite anlegen</span>
-      </SidebarMenuAction>
+      <CollectiveActionsMenu :collective="collective" @create="createOpen = true" />
     </div>
 
     <SidebarMenuSub v-if="isActive">

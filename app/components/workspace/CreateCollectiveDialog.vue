@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { validateCollectiveEmoji } from "~~/shared/collectives";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,15 +32,22 @@ const name = ref("");
 
 const emoji = ref("");
 
+const emojiError = ref("");
+
 watch(
   () => props.open,
   (value) => {
     if (value) {
       name.value = "";
       emoji.value = "";
+      emojiError.value = "";
     }
   },
 );
+
+watch(emoji, () => {
+  emojiError.value = "";
+});
 
 function close() {
   emit("update:open", false);
@@ -52,9 +60,20 @@ function handleSubmit() {
     return;
   }
 
+  const trimmedEmoji = emoji.value.trim() || null;
+
+  const emojiValidation = validateCollectiveEmoji(trimmedEmoji);
+
+  if (!emojiValidation.valid) {
+    emojiError.value = emojiValidation.message;
+    return;
+  }
+
+  emojiError.value = "";
+
   emit("submit", {
     name: trimmedName,
-    emoji: emoji.value.trim() || null,
+    emoji: trimmedEmoji,
   });
 }
 </script>
@@ -86,8 +105,10 @@ function handleSubmit() {
             id="create-collective-emoji"
             v-model="emoji"
             placeholder="🐘"
+            :aria-invalid="Boolean(emojiError)"
             @keydown.enter.prevent="handleSubmit"
           />
+          <p v-if="emojiError" class="text-sm text-destructive">{{ emojiError }}</p>
         </div>
       </div>
 

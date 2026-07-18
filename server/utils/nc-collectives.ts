@@ -2,11 +2,11 @@ import type { H3Event } from "h3";
 import type {
   CollectivePage,
   CollectivePageNode,
-  CollectiveSummary,
   CreateCollectiveInput,
   CreatePageInput,
   UpdatePageInput,
 } from "../../shared/collectives";
+import { buildCollectiveSummary } from "../../shared/collectives";
 import { ncFetchJson } from "./nc-api";
 
 type OcsResponse<T> = {
@@ -20,6 +20,12 @@ type NcCollective = {
   name: string;
   emoji?: string | null;
   canEdit?: boolean;
+  circleId?: string;
+  level?: number;
+  editPermissionLevel?: number;
+  sharePermissionLevel?: number;
+  pageMode?: number;
+  canShare?: boolean;
 };
 
 type NcCollectiveResponse = {
@@ -64,12 +70,15 @@ async function collectivesRequest<T>(
   return (response.ocs?.data ?? {}) as T;
 }
 
-function slugifyCollectiveName(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
+function requireCollective(data: NcCreateCollectiveResponse, action: string) {
+  if (!data.collective) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Nextcloud did not return the ${action} collective`,
+    });
+  }
+
+  return data.collective;
 }
 
 function sortPageNodes(nodes: CollectivePageNode[]) {
@@ -133,14 +142,7 @@ export async function listCollectives(event: H3Event) {
         // Ignore collectives we cannot list pages for.
       }
 
-      return {
-        id: collective.id,
-        name: collective.name,
-        emoji: collective.emoji ?? null,
-        canEdit: collective.canEdit ?? false,
-        slug: slugifyCollectiveName(collective.name),
-        path,
-      } satisfies CollectiveSummary;
+      return buildCollectiveSummary(collective, path);
     }),
   );
 
@@ -168,16 +170,75 @@ export async function createCollective(event: H3Event, input: CreateCollectiveIn
     });
   }
 
-  const collective = data.collective;
+  return buildCollectiveSummary(data.collective, null);
+}
 
-  return {
-    id: collective.id,
-    name: collective.name,
-    emoji: collective.emoji ?? null,
-    canEdit: collective.canEdit ?? true,
-    slug: slugifyCollectiveName(collective.name),
-    path: null,
-  } satisfies CollectiveSummary;
+export async function updateCollectiveEmoji(
+  event: H3Event,
+  collectiveId: number,
+  emoji: string | null,
+) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ emoji }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectiveEditLevel(event: H3Event, collectiveId: number, level: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/editLevel`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ level }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectiveShareLevel(event: H3Event, collectiveId: number, level: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/shareLevel`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ level }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectivePageMode(event: H3Event, collectiveId: number, mode: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/pageMode`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ mode }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function trashCollective(event: H3Event, collectiveId: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "trashed"));
 }
 
 export async function listPages(event: H3Event, collectiveId: number) {
