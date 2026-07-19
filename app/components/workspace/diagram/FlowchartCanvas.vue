@@ -12,13 +12,25 @@ import type { FlowchartDirection, FlowchartModel, FlowchartNodeShape } from "@/l
 
 const model = defineModel<FlowchartModel>({ required: true });
 
+defineProps<{
+  compact?: boolean;
+}>();
+
 const canvas = reactive(useFlowchartCanvas(model));
 </script>
 
 <template>
-  <div class="flex h-full min-h-[280px] flex-col gap-3">
-    <div class="flex flex-wrap items-center gap-2">
-      <Button type="button" size="sm" @click="canvas.addNode">Knoten hinzufügen</Button>
+  <div
+    :class="
+      compact
+        ? 'flex h-full min-h-0 flex-1 flex-col gap-2'
+        : 'flex h-full min-h-[280px] flex-col gap-3'
+    "
+  >
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <Button type="button" size="sm" @click="canvas.addNode">
+        {{ compact ? "Knoten" : "Knoten hinzufügen" }}
+      </Button>
       <Button
         type="button"
         size="sm"
@@ -26,7 +38,7 @@ const canvas = reactive(useFlowchartCanvas(model));
         :disabled="!canvas.selectedNodeId"
         @click="canvas.startConnectMode"
       >
-        {{ canvas.connectFromId ? "Ziel antippen…" : "Verbinden" }}
+        {{ canvas.connectFromId ? "Ziel…" : "Verbinden" }}
       </Button>
       <Button
         type="button"
@@ -37,7 +49,7 @@ const canvas = reactive(useFlowchartCanvas(model));
       >
         Löschen
       </Button>
-      <div class="ml-auto flex flex-wrap gap-1">
+      <div :class="compact ? 'flex flex-wrap gap-1' : 'ml-auto flex flex-wrap gap-1'">
         <Button
           v-for="dir in ['TD', 'LR', 'RL', 'BT'] as FlowchartDirection[]"
           :key="dir"
@@ -51,7 +63,10 @@ const canvas = reactive(useFlowchartCanvas(model));
       </div>
     </div>
 
-    <div v-if="canvas.selectedNode" class="grid gap-2 sm:grid-cols-[1fr_auto]">
+    <div
+      v-if="canvas.selectedNode"
+      class="grid shrink-0 gap-2 sm:grid-cols-[1fr_auto]"
+    >
       <Input
         :model-value="canvas.selectedNode.label"
         placeholder="Knotenlabel"
@@ -74,7 +89,13 @@ const canvas = reactive(useFlowchartCanvas(model));
       </select>
     </div>
 
-    <div class="diagram-flow min-h-[240px] flex-1 overflow-hidden rounded-md border bg-muted/20">
+    <div
+      :class="
+        compact
+          ? 'diagram-flow min-h-0 flex-1 overflow-hidden rounded-md border bg-muted/20'
+          : 'diagram-flow min-h-[240px] flex-1 overflow-hidden rounded-md border bg-muted/20'
+      "
+    >
       <VueFlow
         :nodes="canvas.flowNodes"
         :edges="canvas.flowEdges"

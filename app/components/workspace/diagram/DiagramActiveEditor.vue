@@ -45,47 +45,60 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="min-h-0 overflow-auto rounded-md border p-3">
+  <div
+    :class="
+      compact
+        ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border p-2'
+        : 'min-h-0 overflow-auto rounded-md border p-3'
+    "
+  >
     <Textarea
       v-if="showCode || model.kind === 'raw'"
       :model-value="rawText"
-      :class="compact ? 'min-h-[220px] font-mono text-sm' : 'min-h-[320px] font-mono text-sm'"
+      :class="
+        compact
+          ? 'min-h-0 flex-1 resize-none font-mono text-sm'
+          : 'min-h-[320px] font-mono text-sm'
+      "
       @update:model-value="emit('rawInput', String($event))"
     />
     <FlowchartCanvas
       v-else-if="model.kind === 'flowchart'"
       :model-value="flowchartModel"
+      :compact="compact"
       @update:model-value="emit('update:flowchartModel', $event)"
     />
-    <StateBuilder
-      v-else-if="model.kind === 'state'"
-      :model-value="stateModel"
-      @update:model-value="emit('update:stateModel', $event)"
-    />
-    <SequenceBuilder
-      v-else-if="model.kind === 'sequence'"
-      :model-value="sequenceModel"
-      @update:model-value="emit('update:sequenceModel', $event)"
-    />
-    <ClassBuilder
-      v-else-if="model.kind === 'class'"
-      :model-value="classModel"
-      @update:model-value="emit('update:classModel', $event)"
-    />
-    <ErBuilder
-      v-else-if="model.kind === 'er'"
-      :model-value="erModel"
-      @update:model-value="emit('update:erModel', $event)"
-    />
-    <GanttBuilder
-      v-else-if="model.kind === 'gantt'"
-      :model-value="ganttModel"
-      @update:model-value="emit('update:ganttModel', $event)"
-    />
-    <PieBuilder
-      v-else-if="model.kind === 'pie'"
-      :model-value="pieModel"
-      @update:model-value="emit('update:pieModel', $event)"
-    />
+    <div v-else :class="compact ? 'min-h-0 flex-1 overflow-auto' : ''">
+      <StateBuilder
+        v-if="model.kind === 'state'"
+        :model-value="stateModel"
+        @update:model-value="emit('update:stateModel', $event)"
+      />
+      <SequenceBuilder
+        v-else-if="model.kind === 'sequence'"
+        :model-value="sequenceModel"
+        @update:model-value="emit('update:sequenceModel', $event)"
+      />
+      <ClassBuilder
+        v-else-if="model.kind === 'class'"
+        :model-value="classModel"
+        @update:model-value="emit('update:classModel', $event)"
+      />
+      <ErBuilder
+        v-else-if="model.kind === 'er'"
+        :model-value="erModel"
+        @update:model-value="emit('update:erModel', $event)"
+      />
+      <GanttBuilder
+        v-else-if="model.kind === 'gantt'"
+        :model-value="ganttModel"
+        @update:model-value="emit('update:ganttModel', $event)"
+      />
+      <PieBuilder
+        v-else-if="model.kind === 'pie'"
+        :model-value="pieModel"
+        @update:model-value="emit('update:pieModel', $event)"
+      />
+    </div>
   </div>
 </template>

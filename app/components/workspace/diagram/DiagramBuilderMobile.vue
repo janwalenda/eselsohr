@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -25,16 +24,15 @@ const emit = defineEmits<{
   <Sheet :open="open" @update:open="emit('update:open', $event)">
     <SheetContent
       side="bottom"
-      class="flex h-[95dvh] max-h-[95dvh] flex-col gap-3 overflow-hidden p-4"
+      class="flex h-dvh max-h-dvh flex-col gap-2 overflow-hidden p-3 pt-4"
     >
-      <SheetHeader class="shrink-0 text-left">
+      <SheetHeader class="shrink-0 space-y-0 pr-8 text-left">
         <SheetTitle>{{ title }}</SheetTitle>
-        <SheetDescription>
-          Visuell erstellen oder Mermaid-Code direkt bearbeiten.
-        </SheetDescription>
       </SheetHeader>
-      <slot />
-      <SheetFooter class="shrink-0 flex-row gap-2">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <slot />
+      </div>
+      <SheetFooter class="shrink-0 flex-row gap-2 border-t pt-2">
         <Button type="button" variant="outline" class="flex-1" @click="emit('cancel')">
           Abbrechen
         </Button>

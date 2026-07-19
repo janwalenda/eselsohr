@@ -10,7 +10,7 @@ defineProps<{
   <div
     :class="
       compact
-        ? 'max-h-40 shrink-0 overflow-auto rounded-md border bg-muted/20 p-2'
+        ? 'min-h-0 flex-1 overflow-auto rounded-md border bg-muted/20 p-3'
         : 'min-h-0 overflow-auto rounded-md border bg-muted/20 p-3'
     "
   >
