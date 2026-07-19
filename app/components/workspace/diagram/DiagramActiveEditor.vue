@@ -56,9 +56,7 @@ const emit = defineEmits<{
       v-if="showCode || model.kind === 'raw'"
       :model-value="rawText"
       :class="
-        compact
-          ? 'min-h-0 flex-1 resize-none font-mono text-sm'
-          : 'min-h-[320px] font-mono text-sm'
+        compact ? 'min-h-0 flex-1 resize-none font-mono text-sm' : 'min-h-[320px] font-mono text-sm'
       "
       @update:model-value="emit('rawInput', String($event))"
     />
