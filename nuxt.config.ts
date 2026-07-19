@@ -35,7 +35,13 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
-      include: ["force-graph"],
+      include: [
+        "force-graph",
+        "mermaid",
+        "@vue-flow/core",
+        "@vue-flow/background",
+        "@vue-flow/controls",
+      ],
     },
   },
 
