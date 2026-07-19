@@ -63,10 +63,7 @@ const canvas = reactive(useFlowchartCanvas(model));
       </div>
     </div>
 
-    <div
-      v-if="canvas.selectedNode"
-      class="grid shrink-0 gap-2 sm:grid-cols-[1fr_auto]"
-    >
+    <div v-if="canvas.selectedNode" class="grid shrink-0 gap-2 sm:grid-cols-[1fr_auto]">
       <Input
         :model-value="canvas.selectedNode.label"
         placeholder="Knotenlabel"
