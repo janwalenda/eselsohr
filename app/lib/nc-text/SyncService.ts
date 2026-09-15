@@ -63,6 +63,8 @@ export class SyncService {
   #openConnection: () => Promise<OpenData>;
   #lastStepPush = Date.now();
   #sending = false;
+  /** Last version we already warned about failing to process (debounce spam). */
+  #warnedVersion = -1;
 
   constructor({
     api,
@@ -212,12 +214,24 @@ export class SyncService {
     document?: object;
     sessions?: CollabSession[];
   }) {
-    const versionAfter = Math.max(this.version, ...steps.map((s) => s.version));
+    const contentSteps = steps.filter((step) => step.version > 0);
+
+    const versionAfter =
+      contentSteps.length > 0
+        ? Math.max(this.version, ...contentSteps.map((step) => step.version))
+        : this.version;
 
     this.bus.emit("sync", { steps: [...awarenessSteps(sessions), ...steps], document });
 
-    if (this.version < versionAfter) {
+    // Only warn once per stuck target version — polling re-delivers the same
+    // gap until recovery succeeds and would otherwise flood the console.
+    if (this.version < versionAfter && this.#warnedVersion !== versionAfter) {
+      this.#warnedVersion = versionAfter;
       console.warn(`Failed to process steps leading up to version ${versionAfter}.`);
+    }
+
+    if (this.version >= versionAfter) {
+      this.#warnedVersion = -1;
     }
 
     this.#lastStepPush = Date.now();

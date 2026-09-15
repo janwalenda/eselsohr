@@ -27,6 +27,9 @@ export function resolveDisplaySrc(src: string, collectiveId: number, pageId: num
 }
 
 export const ResolvedImage = Image.extend({
+  // Leaf node: keep adjacent mermaid/code blocks stable when inserting images.
+  atom: true,
+
   addOptions() {
     return {
       ...this.parent?.(),

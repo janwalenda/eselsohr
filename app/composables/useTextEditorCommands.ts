@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/vue-3";
 import { TextSelection } from "@tiptap/pm/state";
 import {
+  insertAtCursor,
   insertImage,
   insertLink,
   insertTable,
@@ -22,8 +23,17 @@ export function useTextEditorCommands(options: {
   apiFetch: ApiFetch;
   collectiveId: MaybeRefOrGetter<number>;
   pageId: MaybeRefOrGetter<number>;
+  openDiagramBuilder?: (mode: "insert" | "edit", source?: string, pos?: number | null) => void;
 }) {
-  const { editor, isSourceMode, applySourceEdit, apiFetch, collectiveId, pageId } = options;
+  const {
+    editor,
+    isSourceMode,
+    applySourceEdit,
+    apiFetch,
+    collectiveId,
+    pageId,
+    openDiagramBuilder,
+  } = options;
 
   function toggleBold() {
     if (isSourceMode.value) {
@@ -193,7 +203,44 @@ export function useTextEditorCommands(options: {
             return;
           }
 
-          editor.value?.chain().focus().setImage({ src: path }).run();
+          editor.value
+            ?.chain()
+            .focus()
+            .command(({ state, tr }) => {
+              const { $from } = state.selection;
+
+              if (
+                $from.parent.type.name !== "codeBlock" ||
+                String($from.parent.attrs.language ?? "")
+                  .trim()
+                  .toLowerCase() !== "mermaid"
+              ) {
+                return true;
+              }
+
+              const pos = $from.before($from.depth);
+
+              const node = tr.doc.nodeAt(pos);
+
+              if (!node) {
+                return true;
+              }
+
+              const after = pos + node.nodeSize;
+
+              const paragraph = state.schema.nodes.paragraph?.create();
+
+              if (paragraph) {
+                tr.insert(after, paragraph);
+                tr.setSelection(TextSelection.create(tr.doc, after + 1));
+              } else {
+                tr.setSelection(TextSelection.near(tr.doc.resolve(after)));
+              }
+
+              return true;
+            })
+            .setImage({ src: path })
+            .run();
         })
         .catch(() => {
           const src = window.prompt("Upload fehlgeschlagen. Bild-URL eingeben");
@@ -207,7 +254,44 @@ export function useTextEditorCommands(options: {
             return;
           }
 
-          editor.value?.chain().focus().setImage({ src }).run();
+          editor.value
+            ?.chain()
+            .focus()
+            .command(({ state, tr }) => {
+              const { $from } = state.selection;
+
+              if (
+                $from.parent.type.name !== "codeBlock" ||
+                String($from.parent.attrs.language ?? "")
+                  .trim()
+                  .toLowerCase() !== "mermaid"
+              ) {
+                return true;
+              }
+
+              const pos = $from.before($from.depth);
+
+              const node = tr.doc.nodeAt(pos);
+
+              if (!node) {
+                return true;
+              }
+
+              const after = pos + node.nodeSize;
+
+              const paragraph = state.schema.nodes.paragraph?.create();
+
+              if (paragraph) {
+                tr.insert(after, paragraph);
+                tr.setSelection(TextSelection.create(tr.doc, after + 1));
+              } else {
+                tr.setSelection(TextSelection.near(tr.doc.resolve(after)));
+              }
+
+              return true;
+            })
+            .setImage({ src })
+            .run();
         });
     };
 
@@ -221,6 +305,29 @@ export function useTextEditorCommands(options: {
     }
 
     editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  }
+
+  function insertDiagramAction() {
+    openDiagramBuilder?.("insert");
+  }
+
+  function insertMermaidSource(source: string) {
+    const fenced = `\n\`\`\`mermaid\n${source.trim()}\n\`\`\`\n`;
+
+    if (isSourceMode.value) {
+      applySourceEdit((textarea) => insertAtCursor(textarea, fenced));
+      return;
+    }
+
+    editor.value
+      ?.chain()
+      .focus()
+      .insertContent({
+        type: "codeBlock",
+        attrs: { language: "mermaid" },
+        content: [{ type: "text", text: source.trim() }],
+      })
+      .run();
   }
 
   function undo() {
@@ -245,6 +352,8 @@ export function useTextEditorCommands(options: {
     promptLink,
     insertImageAction,
     insertTableAction,
+    insertDiagramAction,
+    insertMermaidSource,
     undo,
     redo,
   };

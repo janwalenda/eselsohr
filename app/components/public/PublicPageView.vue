@@ -3,6 +3,7 @@ import { renderMarkdownBody } from "@/lib/nc-text/editor/markdownit";
 import { parseMarkdownFile } from "~~/shared/frontmatter";
 import type { CollectivePage } from "~~/shared/collectives";
 import { resolveWikiLinkTarget } from "~~/shared/wiki-links";
+import { renderMermaid } from "@/composables/useMermaidRender";
 
 const props = defineProps<{
   content: string;
@@ -10,11 +11,70 @@ const props = defineProps<{
   token?: string;
 }>();
 
+const articleRef = ref<HTMLElement | null>(null);
+
 const renderedHtml = computed(() =>
   renderMarkdownBody(parseMarkdownFile(props.content || "").body, {
     pages: props.pages ?? [],
   }),
 );
+
+async function enhanceMermaidBlocks() {
+  if (!import.meta.client || !articleRef.value) {
+    return;
+  }
+
+  const blocks = articleRef.value.querySelectorAll("pre > code.language-mermaid");
+
+  for (const code of blocks) {
+    const pre = code.parentElement;
+
+    if (!(pre instanceof HTMLElement)) {
+      continue;
+    }
+
+    if (pre.dataset.mermaidEnhanced === "true") {
+      continue;
+    }
+
+    const source = code.textContent ?? "";
+    const result = await renderMermaid(source);
+    const wrapper = document.createElement("div");
+
+    wrapper.className = "mermaid-block mermaid-block--readonly";
+    wrapper.dataset.mermaidEnhanced = "true";
+
+    if (result.ok) {
+      wrapper.innerHTML = result.svg;
+    } else {
+      wrapper.classList.add("mermaid-block--error");
+      const hint = document.createElement("p");
+
+      hint.className = "mermaid-block__error";
+      hint.textContent = result.error;
+      const fallback = document.createElement("pre");
+
+      fallback.className = "mermaid-block__fallback";
+      fallback.textContent = source;
+      wrapper.append(hint, fallback);
+    }
+
+    pre.replaceWith(wrapper);
+  }
+}
+
+watch(
+  renderedHtml,
+  async () => {
+    await nextTick();
+    await enhanceMermaidBlocks();
+  },
+  { flush: "post" },
+);
+
+onMounted(() => {
+  void enhanceMermaidBlocks();
+});
 
 function handleArticleClick(event: MouseEvent) {
   if (event.button !== 0) {
@@ -55,5 +115,10 @@ function handleArticleClick(event: MouseEvent) {
 </script>
 
 <template>
-  <article class="prose max-w-none" v-html="renderedHtml" @click="handleArticleClick" />
+  <article
+    ref="articleRef"
+    class="prose max-w-none"
+    v-html="renderedHtml"
+    @click="handleArticleClick"
+  />
 </template>
