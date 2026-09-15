@@ -67,6 +67,7 @@ export async function usePageEditorPanel(
 
   const displayTitle = computed(() => {
     const page = pagePayload.value?.page;
+
     const collective = currentCollective.value;
 
     if (page && collective && isLandingPage(page)) {
@@ -78,6 +79,7 @@ export async function usePageEditorPanel(
 
   const isDisplayLandingPage = computed(() => {
     const page = pagePayload.value?.page;
+
     return Boolean(page && isLandingPage(page));
   });
 

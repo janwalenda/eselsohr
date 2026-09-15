@@ -25,6 +25,7 @@ function loadImageFromFile(file: File): Promise<HTMLImageElement> {
  */
 export async function autoCropSquareIcon(file: File, size = 128): Promise<Blob> {
   const image = await loadImageFromFile(file);
+
   const objectUrl = image.src;
 
   try {

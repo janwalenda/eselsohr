@@ -43,6 +43,7 @@ export async function loadLucideIcon(name: string): Promise<Component | null> {
 
   try {
     const mod = await loader();
+
     const component = mod.default ?? null;
 
     if (!component) {
