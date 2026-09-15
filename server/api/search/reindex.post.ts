@@ -1,6 +1,7 @@
-import { flattenPageTree } from "../../../shared/collectives";
+import { flattenPageTree, isLandingPage } from "../../../shared/collectives";
 import { listCollectives, listPages } from "../../utils/nc-collectives";
 import { readPageContent } from "../../utils/nc-webdav";
+import { indexPageIconFromMarkdown } from "../../utils/page-icons-index";
 import { indexPageTagsFromMarkdown } from "../../utils/page-tags-index";
 
 export default defineEventHandler(async (event) => {
@@ -15,6 +16,9 @@ export default defineEventHandler(async (event) => {
       const content = await readPageContent(event, page);
 
       await indexPageTagsFromMarkdown(event, collective.id, page.id, content.content);
+      await indexPageIconFromMarkdown(event, collective.id, page.id, content.content, {
+        isLanding: isLandingPage(page),
+      });
       indexedPages += 1;
     }
   }

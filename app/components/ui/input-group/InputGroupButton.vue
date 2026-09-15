@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<InputGroupButtonProps>(), {
 
 <template>
   <Button
-    :data-size="props.size"
+    :size="props.size"
     :variant="props.variant"
     :class="cn(inputGroupButtonVariants({ size: props.size }), props.class)"
   >

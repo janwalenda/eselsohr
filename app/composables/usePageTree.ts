@@ -73,7 +73,11 @@ export function usePageTree(props: PageTreeProps) {
     })),
   );
 
-  async function handleCreate(title: string) {
+  async function handleCreate(payload: {
+    title: string;
+    icon: string | null;
+    pendingImage: Blob | null;
+  }) {
     if (!createTarget.value) {
       return;
     }
@@ -81,7 +85,21 @@ export function usePageTree(props: PageTreeProps) {
     try {
       const parentId = resolveCreateParentId(createTarget.value);
 
-      const page = await props.createPage({ title, parentId });
+      const page = await props.createPage({
+        title: payload.title,
+        parentId,
+        icon: payload.icon,
+      });
+
+      if (payload.pendingImage) {
+        const apiFetch = useApiFetch();
+
+        const { finalizeCreatedPageIcon } = await import("@/lib/page-icons");
+
+        await finalizeCreatedPageIcon(apiFetch, props.collectiveId, page.id, {
+          pendingImage: payload.pendingImage,
+        });
+      }
 
       toast.success("Unterseite erstellt");
       await navigateTo(`/app/${props.collectiveId}/${page.id}`);

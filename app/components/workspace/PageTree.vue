@@ -68,6 +68,7 @@ const {
   <CreatePageDialog
     :open="Boolean(createTarget)"
     :context-label="createTarget?.title"
+    :collective-id="collectiveId"
     @submit="handleCreate"
     @update:open="!$event && (createTarget = null)"
   />

@@ -36,6 +36,26 @@ Body
 
     expect(parsed.properties.tags).toEqual(["old", "journal"]);
   });
+  it("round-trips an icon frontmatter property", () => {
+    const source = `---
+icon: lucide:folder-open
+tags:
+  - notes
+---
+# Hello
+`;
+
+    const parsed = parseMarkdownFile(source);
+
+    expect(parsed.properties.icon).toBe("lucide:folder-open");
+
+    const composed = composeMarkdownFile(parsed.properties, parsed.body);
+
+    const reparsed = parseMarkdownFile(composed);
+
+    expect(reparsed.properties.icon).toBe("lucide:folder-open");
+    expect(reparsed.properties.tags).toEqual(["notes"]);
+  });
 });
 
 describe("composeMarkdownFile", () => {

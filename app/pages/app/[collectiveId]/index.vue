@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { toast } from "vue-sonner";
+import { SettingsIcon } from "lucide-vue-next";
+import CollectiveSettingsDialog from "@/components/workspace/CollectiveSettingsDialog.vue";
+import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
+import { Button } from "@/components/ui/button";
 import { extractApiErrorMessage } from "~~/shared/api-errors";
 
 definePageMeta({
@@ -13,7 +17,8 @@ const collectiveId = computed(() => Number(route.params.collectiveId));
 
 const { collectives } = useCollectives();
 
-const { pages, pending, error, createPage, landingPage } = useCollectivePages(collectiveId);
+const { pages, pending, error, createPage, landingPage, refreshPages } =
+  useCollectivePages(collectiveId);
 
 const currentCollective = computed(
   () => collectives.value.find((collective) => collective.id === collectiveId.value) ?? null,
@@ -21,11 +26,20 @@ const currentCollective = computed(
 
 const createOpen = ref(false);
 
-function toMessage(input: unknown) {
-  return extractApiErrorMessage(input, "Die Seite konnte nicht erstellt werden.");
-}
+const { settingsOpen, saving, handleSave } = useCollectiveActions(
+  () =>
+    currentCollective.value ?? {
+      id: collectiveId.value,
+      name: "",
+      slug: "",
+    },
+);
 
-async function handleCreate(title: string) {
+async function handleCreate(payload: {
+  title: string;
+  icon: string | null;
+  pendingImage: Blob | null;
+}) {
   try {
     const rootParentId = landingPage.value?.id;
 
@@ -33,12 +47,27 @@ async function handleCreate(title: string) {
       throw new Error("Die Landing-Page des Collectives konnte nicht gefunden werden.");
     }
 
-    const page = await createPage({ title, parentId: rootParentId });
+    const apiFetch = useApiFetch();
+
+    const page = await createPage({
+      title: payload.title,
+      parentId: rootParentId,
+      icon: payload.icon,
+    });
+
+    if (payload.pendingImage) {
+      const { finalizeCreatedPageIcon } = await import("@/lib/page-icons");
+
+      await finalizeCreatedPageIcon(apiFetch, collectiveId.value, page.id, {
+        pendingImage: payload.pendingImage,
+      });
+      await refreshPages();
+    }
 
     toast.success("Seite erstellt");
     await navigateTo(`/app/${collectiveId.value}/${page.id}`);
   } catch (createError) {
-    toast.error(toMessage(createError));
+    toast.error(extractApiErrorMessage(createError, "Die Seite konnte nicht erstellt werden."));
   }
 }
 </script>
@@ -62,9 +91,20 @@ async function handleCreate(title: string) {
       </template>
 
       <template v-else-if="(pages ?? []).length === 0">
-        <h1 class="text-3xl font-semibold tracking-tight">
-          {{ currentCollective?.name || "Collective" }}
-        </h1>
+        <div class="flex items-start justify-between gap-3">
+          <h1 class="text-3xl font-semibold tracking-tight">
+            {{ currentCollective?.name || "Collective" }}
+          </h1>
+          <Button
+            v-if="currentCollective?.canEdit"
+            variant="outline"
+            size="sm"
+            @click="settingsOpen = true"
+          >
+            <SettingsIcon class="size-4" />
+            Einstellungen
+          </Button>
+        </div>
         <p class="mt-3 text-sm text-muted-foreground">
           Dieses Collective enthält noch keine Seiten. Lege die erste Markdown-Seite an, um den
           Workspace zu starten.
@@ -82,7 +122,15 @@ async function handleCreate(title: string) {
     <CreatePageDialog
       v-model:open="createOpen"
       :context-label="currentCollective?.name || ''"
+      :collective-id="collectiveId"
       @submit="handleCreate"
+    />
+    <CollectiveSettingsDialog
+      v-if="currentCollective"
+      v-model:open="settingsOpen"
+      :collective="currentCollective"
+      :pending="saving"
+      @submit="handleSave"
     />
   </div>
 </template>

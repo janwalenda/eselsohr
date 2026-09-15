@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import AppIcon from "@/components/AppIcon.vue";
+import CreateCollectiveDialog from "@/components/workspace/CreateCollectiveDialog.vue";
+import { Button } from "@/components/ui/button";
+
 definePageMeta({
   layout: "workspace",
 });
 
 const { collectives, pending, error } = useCollectives();
+
+const { createOpen, creating, handleCreateCollective } = useCreateCollective();
 </script>
 
 <template>
@@ -36,8 +42,15 @@ const { collectives, pending, error } = useCollectives();
             :to="`/app/${collective.id}`"
             class="rounded-lg border p-4 transition hover:bg-accent hover:text-accent-foreground"
           >
-            <div class="font-medium">
-              {{ collective.emoji ? `${collective.emoji} ` : "" }}{{ collective.name }}
+            <div class="flex items-center gap-2 font-medium">
+              <AppIcon
+                :icon="collective.icon"
+                :collective-id="collective.id"
+                :owner-page-id="collective.iconOwnerPageId"
+                :fallback-emoji="collective.emoji"
+                fallback-lucide="folder-open"
+              />
+              {{ collective.name }}
             </div>
             <div class="mt-1 text-sm text-muted-foreground">
               {{ collective.slug }}
@@ -45,10 +58,19 @@ const { collectives, pending, error } = useCollectives();
           </NuxtLink>
         </div>
 
-        <p v-else class="text-sm text-muted-foreground">
-          Auf dieser Instanz wurden noch keine Collectives gefunden.
-        </p>
+        <div v-else class="space-y-3">
+          <p class="text-sm text-muted-foreground">
+            Auf dieser Instanz wurden noch keine Collectives gefunden.
+          </p>
+          <Button @click="createOpen = true">Collective erstellen</Button>
+        </div>
       </div>
     </Card>
+
+    <CreateCollectiveDialog
+      v-model:open="createOpen"
+      :pending="creating"
+      @submit="handleCreateCollective"
+    />
   </div>
 </template>

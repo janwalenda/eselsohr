@@ -7,13 +7,13 @@ import type {
 } from "~~/shared/collectives";
 import {
   ChevronRightIcon,
-  FileTextIcon,
   FolderPlusIcon,
   MoreHorizontalIcon,
   PencilIcon,
   Trash2Icon,
   WaypointsIcon,
 } from "lucide-vue-next";
+import AppIcon from "@/components/AppIcon.vue";
 import PageTree from "@/components/workspace/PageTree.vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +65,12 @@ const emit = defineEmits<{
 
       <SidebarMenuSubButton as-child :is-active="page.id === activePageId" class="flex-1">
         <NuxtLink :to="`/app/${collectiveId}/${page.id}`" @click="emit('linkClick', $event)">
-          <FileTextIcon class="size-4" />
+          <AppIcon
+            :icon="page.icon"
+            :collective-id="collectiveId"
+            :owner-page-id="page.id"
+            fallback-lucide="file-text"
+          />
           <span class="min-w-0 flex-1 truncate">{{ page.title }}</span>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>

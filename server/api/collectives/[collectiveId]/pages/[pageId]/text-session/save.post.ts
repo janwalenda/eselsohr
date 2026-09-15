@@ -1,6 +1,8 @@
 import type { H3Event } from "h3";
 import { readBody } from "h3";
 import { forwardTextSession } from "../../../../../../utils/nc-text";
+import { getPage } from "../../../../../../utils/nc-collectives";
+import { indexPageIconForPage } from "../../../../../../utils/page-icons-index";
 import { indexPageTagsFromMarkdown } from "../../../../../../utils/page-tags-index";
 
 function getNumericRouteParam(event: H3Event, key: string) {
@@ -30,6 +32,14 @@ export default defineEventHandler(async (event) => {
 
   if (status >= 200 && status < 300 && typeof payload.autosaveContent === "string") {
     await indexPageTagsFromMarkdown(event, collectiveId, pageId, payload.autosaveContent);
+
+    try {
+      const page = await getPage(event, collectiveId, pageId);
+
+      await indexPageIconForPage(event, collectiveId, page, payload.autosaveContent);
+    } catch (error) {
+      console.error("[page-icons] indexing after save failed:", error);
+    }
   }
 
   setResponseStatus(event, status);

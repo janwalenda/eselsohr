@@ -6,6 +6,7 @@ import {
 import { composeMarkdownFile, parseMarkdownFile } from "../../../../../../shared/frontmatter";
 import type { PageProperties } from "../../../../../../shared/properties";
 import { getPage } from "../../../../../utils/nc-collectives";
+import { indexPageIconForPage } from "../../../../../utils/page-icons-index";
 import { indexPageTagsFromMarkdown } from "../../../../../utils/page-tags-index";
 import { writePageContent } from "../../../../../utils/nc-webdav";
 
@@ -52,6 +53,7 @@ export default defineEventHandler(async (event) => {
   const result = await writePageContent(event, page, markdown, body.etag ?? null);
 
   await indexPageTagsFromMarkdown(event, collectiveId, pageId, markdown);
+  await indexPageIconForPage(event, collectiveId, page, markdown);
 
   return {
     page,

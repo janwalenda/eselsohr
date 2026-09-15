@@ -2,11 +2,18 @@ import type { H3Event } from "h3";
 import type {
   CollectivePage,
   CollectivePageNode,
-  CollectiveSummary,
+  CreateCollectiveInput,
   CreatePageInput,
   UpdatePageInput,
 } from "../../shared/collectives";
+import { buildCollectiveSummary, validateCollectiveEmoji } from "../../shared/collectives";
+import { iconFromEmoji, parseIcon, serializeIcon } from "../../shared/icons";
 import { ncFetchJson } from "./nc-api";
+import {
+  getCollectiveIconsMap,
+  getCollectiveLevelIcons,
+  type PageIconRecord,
+} from "./page-icons-db";
 
 type OcsResponse<T> = {
   ocs?: {
@@ -14,13 +21,25 @@ type OcsResponse<T> = {
   };
 };
 
+type NcCollective = {
+  id: number;
+  name: string;
+  emoji?: string | null;
+  canEdit?: boolean;
+  circleId?: string;
+  level?: number;
+  editPermissionLevel?: number;
+  sharePermissionLevel?: number;
+  pageMode?: number;
+  canShare?: boolean;
+};
+
 type NcCollectiveResponse = {
-  collectives?: Array<{
-    id: number;
-    name: string;
-    emoji?: string | null;
-    canEdit?: boolean;
-  }>;
+  collectives?: NcCollective[];
+};
+
+type NcCreateCollectiveResponse = {
+  collective?: NcCollective;
 };
 
 type NcPageResponse = {
@@ -57,12 +76,15 @@ async function collectivesRequest<T>(
   return (response.ocs?.data ?? {}) as T;
 }
 
-function slugifyCollectiveName(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
+function requireCollective(data: NcCreateCollectiveResponse, action: string) {
+  if (!data.collective) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Nextcloud did not return the ${action} collective`,
+    });
+  }
+
+  return data.collective;
 }
 
 function sortPageNodes(nodes: CollectivePageNode[]) {
@@ -109,38 +131,188 @@ export function buildPageTree(pages: CollectivePage[]) {
   return roots;
 }
 
+function applyPageIcons(pages: CollectivePage[], icons: Map<number, PageIconRecord>) {
+  for (const page of pages) {
+    const record = icons.get(page.id);
+
+    if (record) {
+      page.icon = record.icon;
+    } else if (page.emoji) {
+      page.icon = iconFromEmoji(page.emoji);
+    }
+  }
+
+  return pages;
+}
+
 export async function listCollectives(event: H3Event) {
   const data = await collectivesRequest<NcCollectiveResponse>(event, "/collectives");
 
   const collectives = data.collectives ?? [];
+
+  let collectiveIcons = new Map<number, PageIconRecord>();
+
+  try {
+    collectiveIcons = await getCollectiveLevelIcons(event);
+  } catch (error) {
+    // Icon index is best-effort (migration may be missing).
+    console.error("[page-icons] failed to load collective icons:", error);
+  }
 
   const withPaths = await Promise.all(
     collectives.map(async (collective) => {
       let path: string | null = null;
 
       try {
-        const pages = await listPages(event, collective.id);
+        // Avoid recursive icon joins when only the collective path is needed.
+        const pages = await listPagesRaw(event, collective.id);
 
         path = pages.find((page) => page.collectivePath)?.collectivePath ?? null;
       } catch {
         // Ignore collectives we cannot list pages for.
       }
 
-      return {
-        id: collective.id,
-        name: collective.name,
-        emoji: collective.emoji ?? null,
-        canEdit: collective.canEdit ?? false,
-        slug: slugifyCollectiveName(collective.name),
+      const iconRecord = collectiveIcons.get(collective.id);
+
+      return buildCollectiveSummary(
+        {
+          ...collective,
+          icon: iconRecord?.icon ?? iconFromEmoji(collective.emoji),
+          iconOwnerPageId: iconRecord?.ownerPageId ?? null,
+        },
         path,
-      } satisfies CollectiveSummary;
+      );
     }),
   );
 
   return withPaths;
 }
 
-export async function listPages(event: H3Event, collectiveId: number) {
+function resolveNcEmojiFromIcon(icon: string | null | undefined, explicitEmoji?: string | null) {
+  if (explicitEmoji) {
+    return validateCollectiveEmoji(explicitEmoji).valid ? explicitEmoji : null;
+  }
+
+  const parsed = parseIcon(icon);
+
+  if (!parsed || parsed.kind !== "emoji") {
+    return null;
+  }
+
+  return validateCollectiveEmoji(parsed.value).valid ? parsed.value : null;
+}
+
+function normalizeIconInput(icon: string | null | undefined) {
+  const parsed = parseIcon(icon);
+
+  return parsed ? serializeIcon(parsed) : null;
+}
+
+export async function createCollective(event: H3Event, input: CreateCollectiveInput) {
+  const name = input.name.trim();
+
+  const icon = normalizeIconInput(input.icon);
+
+  const emoji = resolveNcEmojiFromIcon(icon, input.emoji);
+
+  const requestBody: Record<string, unknown> = { name };
+
+  if (emoji) {
+    requestBody.emoji = emoji;
+  }
+
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(event, "/collectives", {
+    method: "POST",
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!data.collective) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Nextcloud did not return the created collective",
+    });
+  }
+
+  return buildCollectiveSummary(
+    {
+      ...data.collective,
+      emoji: emoji ?? data.collective.emoji ?? null,
+      icon,
+      iconOwnerPageId: null,
+    },
+    null,
+  );
+}
+
+export async function updateCollectiveEmoji(
+  event: H3Event,
+  collectiveId: number,
+  emoji: string | null,
+) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ emoji }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectiveEditLevel(event: H3Event, collectiveId: number, level: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/editLevel`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ level }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectiveShareLevel(event: H3Event, collectiveId: number, level: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/shareLevel`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ level }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function setCollectivePageMode(event: H3Event, collectiveId: number, mode: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}/pageMode`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ mode }),
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "updated"));
+}
+
+export async function trashCollective(event: H3Event, collectiveId: number) {
+  const data = await collectivesRequest<NcCreateCollectiveResponse>(
+    event,
+    `/collectives/${collectiveId}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return buildCollectiveSummary(requireCollective(data, "trashed"));
+}
+
+async function listPagesRaw(event: H3Event, collectiveId: number) {
   const data = await collectivesRequest<NcPagesResponse>(
     event,
     `/collectives/${collectiveId}/pages`,
@@ -149,8 +321,29 @@ export async function listPages(event: H3Event, collectiveId: number) {
   return data.pages ?? [];
 }
 
+export async function listPages(event: H3Event, collectiveId: number) {
+  const pages = await listPagesRaw(event, collectiveId);
+
+  try {
+    const icons = await getCollectiveIconsMap(event, collectiveId);
+
+    return applyPageIcons(pages, icons);
+  } catch (error) {
+    console.error("[page-icons] failed to load page icons:", error);
+    return applyPageIcons(pages, new Map());
+  }
+}
+
 export async function listPageTree(event: H3Event, collectiveId: number) {
   return buildPageTree(await listPages(event, collectiveId));
+}
+
+/** Attach indexed icons to an already-fetched page list (e.g. public shares). */
+export function attachPageIcons(
+  pages: CollectivePage[],
+  icons: Map<number, PageIconRecord>,
+): CollectivePage[] {
+  return applyPageIcons(pages, icons);
 }
 
 export async function getPage(event: H3Event, collectiveId: number, pageId: number) {
@@ -161,6 +354,22 @@ export async function getPage(event: H3Event, collectiveId: number, pageId: numb
 
   if (!data.page) {
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
+  }
+
+  try {
+    const icons = await getCollectiveIconsMap(event, collectiveId);
+
+    const record = icons.get(pageId);
+
+    if (record) {
+      data.page.icon = record.icon;
+    } else if (data.page.emoji) {
+      data.page.icon = iconFromEmoji(data.page.emoji);
+    }
+  } catch {
+    if (data.page.emoji) {
+      data.page.icon = iconFromEmoji(data.page.emoji);
+    }
   }
 
   return data.page;
@@ -191,6 +400,12 @@ export async function createPage(event: H3Event, collectiveId: number, input: Cr
       statusCode: 502,
       statusMessage: "Nextcloud did not return the created page",
     });
+  }
+
+  const icon = normalizeIconInput(input.icon);
+
+  if (icon) {
+    data.page.icon = icon;
   }
 
   return data.page;
