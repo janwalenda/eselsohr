@@ -9,6 +9,7 @@ export function shouldApplySourceMarkdownOnModeSwitch(sourceRemoteStale: boolean
  */
 export function ensureClosedFencedCodeBlocks(markdown: string): string {
   const lines = markdown.split("\n");
+
   let openFence: string | null = null;
 
   for (const line of lines) {
@@ -19,6 +20,7 @@ export function ensureClosedFencedCodeBlocks(markdown: string): string {
     }
 
     const marker = match[1];
+
     const info = match[2] ?? "";
 
     if (!openFence) {
@@ -27,7 +29,9 @@ export function ensureClosedFencedCodeBlocks(markdown: string): string {
     }
 
     const sameChar = marker[0] === openFence[0];
+
     const longEnough = marker.length >= openFence.length;
+
     const emptyInfo = info.trim() === "";
 
     if (sameChar && longEnough && emptyInfo) {
@@ -40,6 +44,7 @@ export function ensureClosedFencedCodeBlocks(markdown: string): string {
   }
 
   const trimmedEnd = markdown.replace(/\s*$/, "");
+
   const suffix = trimmedEnd.length === 0 || trimmedEnd.endsWith("\n") ? "" : "\n";
 
   return `${trimmedEnd}${suffix}${openFence}\n`;
