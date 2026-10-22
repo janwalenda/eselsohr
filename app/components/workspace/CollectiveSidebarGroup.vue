@@ -1,83 +1,90 @@
 <script setup lang="ts">
-import type { CollectiveSummary } from '~~/shared/collectives'
-import { extractApiErrorMessage } from '~~/shared/api-errors'
-import { toast } from 'vue-sonner'
-import { FilePlus2Icon, FolderOpenIcon } from 'lucide-vue-next'
-import CollectiveSidebarPages from '@/components/workspace/CollectiveSidebarPages.vue'
-import CreatePageDialog from '@/components/workspace/CreatePageDialog.vue'
-import { navigateToCollective } from '@/composables/useCollectiveNavigation'
+import type { CollectiveSummary } from "~~/shared/collectives";
+import { ChevronRightIcon, GitBranchIcon } from "lucide-vue-next";
+import AppIcon from "@/components/AppIcon.vue";
+import CollectiveActionsMenu from "@/components/workspace/CollectiveActionsMenu.vue";
+import CollectiveSidebarPages from "@/components/workspace/CollectiveSidebarPages.vue";
+import CreatePageDialog from "@/components/workspace/CreatePageDialog.vue";
+import { useCollectiveSidebarGroup } from "@/composables/useCollectiveSidebarGroup";
+import { Button } from "@/components/ui/button";
 import {
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar'
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
 
 const props = defineProps<{
-  collective: CollectiveSummary
-  activePageId?: number | null
-  isActive: boolean
-}>()
+  collective: CollectiveSummary;
+  activePageId?: number | null;
+  isActive: boolean;
+  isGraphView?: boolean;
+}>();
 
-const apiFetch = useApiFetch()
-const createOpen = ref(false)
-const openingCollective = ref(false)
-
-async function openCollective() {
-  if (openingCollective.value) {
-    return
-  }
-  openingCollective.value = true
-  try {
-    await navigateToCollective(props.collective.id)
-  }
-  finally {
-    openingCollective.value = false
-  }
-}
-
-function toMessage(error: unknown) {
-  return extractApiErrorMessage(error)
-}
-
-async function handleCreate(title: string) {
-  try {
-    const response = await apiFetch<{ page: { id: number } }>(
-      `/api/collectives/${props.collective.id}/pages`,
-      {
-        method: 'POST',
-        body: { title, parentId: 0 },
-      },
-    )
-    toast.success('Seite erstellt')
-    await navigateTo(`/app/${props.collective.id}/${response.page.id}`)
-  }
-  catch (createError) {
-    toast.error(toMessage(createError))
-  }
-}
+const {
+  createOpen,
+  openingCollective,
+  pagesExpanded,
+  isCollectiveDocumentActive,
+  handleCollectiveClick,
+  handleCreate,
+} = useCollectiveSidebarGroup(
+  () => props.collective,
+  () => props.isActive,
+  () => props.activePageId,
+);
 </script>
 
 <template>
   <SidebarMenuItem class="space-y-1">
     <div class="group flex items-center gap-1">
+      <Button
+        v-if="isActive"
+        variant="ghost"
+        size="icon"
+        class="size-6 shrink-0"
+        @click="pagesExpanded = !pagesExpanded"
+      >
+        <ChevronRightIcon
+          class="size-3.5 transition-transform"
+          :class="pagesExpanded ? 'rotate-90' : ''"
+        />
+      </Button>
+      <div v-else class="w-6 shrink-0" />
+
       <SidebarMenuButton
-        :is-active="isActive && !activePageId"
+        :is-active="isCollectiveDocumentActive"
         class="flex-1"
         :disabled="openingCollective"
-        @click="openCollective"
+        @click="handleCollectiveClick"
       >
-        <FolderOpenIcon class="size-4" />
-        <span>{{ collective.emoji ? `${collective.emoji} ` : '' }}{{ collective.name }}</span>
+        <AppIcon
+          :icon="collective.icon"
+          :collective-id="collective.id"
+          :owner-page-id="collective.iconOwnerPageId"
+          :fallback-emoji="collective.emoji"
+          fallback-lucide="folder-open"
+        />
+        <span>{{ collective.name }}</span>
       </SidebarMenuButton>
 
-      <SidebarMenuAction @click="createOpen = true">
-        <FilePlus2Icon class="size-4" />
-        <span class="sr-only">Seite anlegen</span>
-      </SidebarMenuAction>
+      <CollectiveActionsMenu :collective="collective" @create="createOpen = true" />
     </div>
 
+    <SidebarMenuSub v-if="isActive">
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton as-child :is-active="isGraphView">
+          <NuxtLink :to="`/app/${collective.id}/graph`">
+            <GitBranchIcon class="size-4" />
+            <span>Graph</span>
+          </NuxtLink>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    </SidebarMenuSub>
+
     <CollectiveSidebarPages
-      v-if="isActive"
+      v-if="isActive && pagesExpanded"
       :collective-id="collective.id"
       :active-page-id="activePageId"
     />
@@ -85,6 +92,7 @@ async function handleCreate(title: string) {
     <CreatePageDialog
       v-model:open="createOpen"
       :context-label="collective.name"
+      :collective-id="collective.id"
       @submit="handleCreate"
     />
   </SidebarMenuItem>

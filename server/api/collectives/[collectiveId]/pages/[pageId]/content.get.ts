@@ -1,31 +1,39 @@
-import type { H3Event } from 'h3'
-import { buildAttachmentProxyBase, rewriteCollectiveAttachmentsForDisplay } from '../../../../../../shared/collective-attachments'
-import { getPage } from '../../../../../utils/nc-collectives'
-import { readPageContent } from '../../../../../utils/nc-webdav'
+import type { H3Event } from "h3";
+import {
+  buildAttachmentProxyBase,
+  rewriteCollectiveAttachmentsForDisplay,
+} from "../../../../../../shared/collective-attachments";
+import { parseMarkdownFile } from "../../../../../../shared/frontmatter";
+import { getPage } from "../../../../../utils/nc-collectives";
+import { readPageContent } from "../../../../../utils/nc-webdav";
 
 function getNumericRouteParam(event: H3Event, key: string) {
-  const value = Number(getRouterParam(event, key))
+  const value = Number(getRouterParam(event, key));
+
   if (!Number.isFinite(value)) {
-    throw createError({ statusCode: 400, statusMessage: `Invalid ${key}` })
+    throw createError({ statusCode: 400, statusMessage: `Invalid ${key}` });
   }
-  return value
+
+  return value;
 }
 
 export default defineEventHandler(async (event) => {
-  const collectiveId = getNumericRouteParam(event, 'collectiveId')
-  const pageId = getNumericRouteParam(event, 'pageId')
-  try {
-    const page = await getPage(event, collectiveId, pageId)
-    const content = await readPageContent(event, page)
-    const proxyBase = buildAttachmentProxyBase(collectiveId, pageId)
+  const collectiveId = getNumericRouteParam(event, "collectiveId");
 
-    return {
-      page,
-      content: rewriteCollectiveAttachmentsForDisplay(content.content, proxyBase),
-      etag: content.etag,
-    }
-  }
-  catch (error) {
-    throw error
-  }
-})
+  const pageId = getNumericRouteParam(event, "pageId");
+
+  const page = await getPage(event, collectiveId, pageId);
+
+  const rawContent = await readPageContent(event, page);
+
+  const parsed = parseMarkdownFile(rawContent.content);
+
+  const proxyBase = buildAttachmentProxyBase(collectiveId, pageId);
+
+  return {
+    page,
+    properties: parsed.properties,
+    content: rewriteCollectiveAttachmentsForDisplay(parsed.body, proxyBase),
+    etag: rawContent.etag,
+  };
+});

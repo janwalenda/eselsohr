@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type { CollectivePageNode } from '~~/shared/collectives'
-import { useEventListener } from '@vueuse/core'
-import { FileTextIcon } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
-import { flattenPageTree } from '@/composables/useCollectivePages'
+import { FileTextIcon } from "lucide-vue-next";
 import {
   CommandDialog,
   CommandEmpty,
@@ -12,85 +8,85 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
-} from '@/components/ui/command'
+} from "@/components/ui/command";
+import QuickSwitcherQuerySync from "@/components/workspace/QuickSwitcherQuerySync.vue";
+import { useQuickSwitcher } from "@/composables/useQuickSwitcher";
 
-const apiFetch = useApiFetch()
-const open = ref(false)
-const pageMap = ref<Record<number, CollectivePageNode[]>>({})
-const { collectives } = useCollectives()
-
-watch(
-  [open, collectives],
-  async ([isOpen, items]) => {
-    if (!isOpen) {
-      return
-    }
-    const entries = await Promise.all(items.map(async (collective) => {
-      try {
-        const response = await apiFetch<{ pages: CollectivePageNode[] }>(
-          `/api/collectives/${collective.id}/pages`,
-        )
-        return [collective.id, response.pages] as const
-      }
-      catch {
-        return [collective.id, []] as const
-      }
-    }))
-
-    pageMap.value = Object.fromEntries(entries)
-  },
-)
-
-useEventListener(window, 'keydown', (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault()
-    open.value = true
-  }
-})
-
-useEventListener(window, 'workspace:open-switcher', () => {
-  open.value = true
-})
-
-const groupedItems = computed(() =>
-  collectives.value.map(collective => ({
-    collective,
-    pages: flattenPageTree(pageMap.value[collective.id] ?? []),
-  })),
-)
-
-async function goToPage(collectiveId: number, pageId: number) {
-  open.value = false
-  await navigateTo(`/app/${collectiveId}/${pageId}`)
-}
+const {
+  open,
+  searchQuery,
+  tagResults,
+  parsedQuery,
+  filteredGroupedItems,
+  groupedTagResults,
+  itemSearchValue,
+  goToPage,
+} = useQuickSwitcher();
 </script>
 
 <template>
   <CommandDialog
     v-model:open="open"
     title="Seite wechseln"
-    description="Suche nach Collectives und Seiten."
+    description="Suche nach Collectives, Seiten oder Tags."
+    :filter-disabled="!!parsedQuery.tag"
   >
-    <CommandInput placeholder="Seiten durchsuchen..." />
+    <CommandInput placeholder="Seiten durchsuchen… (z. B. tags:entwurf)" />
+    <QuickSwitcherQuerySync @change="searchQuery = $event" />
     <CommandList>
-      <CommandEmpty>Keine passende Seite gefunden.</CommandEmpty>
+      <CommandEmpty v-if="!parsedQuery.tag || tagResults.length === 0">
+        {{
+          parsedQuery.tag
+            ? "Keine Seiten mit diesem Tag gefunden."
+            : "Keine passende Seite gefunden."
+        }}
+      </CommandEmpty>
 
-      <CommandGroup
-        v-for="group in groupedItems"
-        :key="group.collective.id"
-        :heading="group.collective.name"
-      >
-        <CommandItem
-          v-for="page in group.pages"
-          :key="page.id"
-          :value="`${group.collective.name} ${page.title}`"
-          @select="goToPage(group.collective.id, page.id)"
+      <template v-if="parsedQuery.tag">
+        <CommandGroup
+          v-for="group in groupedTagResults"
+          :key="group.collectiveName"
+          :heading="group.collectiveName"
         >
-          <FileTextIcon class="mr-2 size-4" />
-          <span>{{ page.title }}</span>
-          <CommandShortcut>{{ group.collective.name }}</CommandShortcut>
-        </CommandItem>
-      </CommandGroup>
+          <CommandItem
+            v-for="result in group.results"
+            :key="`${result.collectiveId}-${result.pageId}`"
+            :value="
+              itemSearchValue(result.title, result.collectiveName, ...result.tags, parsedQuery.tag)
+            "
+            @select="goToPage(result.collectiveId, result.pageId)"
+          >
+            <span class="sr-only">{{ searchQuery }}</span>
+            <FileTextIcon class="mr-2 size-4" />
+            <div class="flex min-w-0 flex-1 flex-col">
+              <span>{{ result.title }}</span>
+              <span v-if="result.tags.length > 0" class="text-xs text-muted-foreground">
+                {{ result.tags.map((tag) => `#${tag}`).join(" ") }}
+              </span>
+            </div>
+            <CommandShortcut>{{ result.collectiveName }}</CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
+      </template>
+
+      <template v-else>
+        <CommandGroup
+          v-for="group in filteredGroupedItems"
+          :key="group.collective.id"
+          :heading="group.collective.name"
+        >
+          <CommandItem
+            v-for="page in group.pages"
+            :key="page.id"
+            :value="itemSearchValue(page.title, group.collective.name)"
+            @select="goToPage(group.collective.id, page.id)"
+          >
+            <FileTextIcon class="mr-2 size-4" />
+            <span>{{ page.title }}</span>
+            <CommandShortcut>{{ group.collective.name }}</CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
+      </template>
     </CommandList>
   </CommandDialog>
 </template>

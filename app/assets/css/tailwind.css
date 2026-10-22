@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @plugin '@tailwindcss/typography';
 
 :root {
@@ -37,6 +37,7 @@
   --color-border: oklch(92.2% 0 0);
   --color-input: oklch(92.2% 0 0);
   --color-ring: oklch(70.8% 0 0);
+  --color-destructive: oklch(55% 0.18 25);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -69,83 +70,100 @@
   }
 }
 
-/* Collaborative editor: typography handles base prose; these cover the bits it
-   doesn't (Collectives callouts, task lists, remote collaboration carets). */
-.nc-text-prose:focus {
-  outline: none;
+.prose .wiki-link,
+.prose a.wiki-link {
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.nc-text-prose ul[data-type='taskList'] {
-  list-style: none;
-  padding-left: 0;
+.prose .wiki-link--broken,
+.prose a.wiki-link--broken {
+  color: var(--color-muted-foreground);
+  text-decoration-style: dashed;
 }
 
-.nc-text-prose ul[data-type='taskList'] li {
+.prose .mermaid-block,
+.mermaid-block {
+  margin: 1rem 0;
   display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-}
-
-.nc-text-prose ul[data-type='taskList'] li > label {
-  margin-top: 0.3rem;
-}
-
-.nc-text-prose .callout {
-  margin: 0.75rem 0;
-  padding: 0.75rem 1rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  border-inline-start: 0.3em solid var(--callout-border, var(--color-primary));
-  background-color: color-mix(in oklch, var(--callout-border, var(--color-primary)) 12%, transparent);
+  background: color-mix(in oklch, var(--color-muted) 35%, transparent);
+  padding: 0.75rem;
 }
 
-.nc-text-prose .callout > :first-child {
-  margin-top: 0;
+.mermaid-block--selected {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
-.nc-text-prose .callout > :last-child {
-  margin-bottom: 0;
+.mermaid-block__preview {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
 }
 
-.nc-text-prose .callout--info {
-  --callout-border: oklch(55% 0.12 240);
+.mermaid-block__preview svg,
+.mermaid-preview svg {
+  max-width: 100%;
+  height: auto;
 }
 
-.nc-text-prose .callout--success {
-  --callout-border: oklch(55% 0.14 145);
+.mermaid-block__preview--error,
+.mermaid-block--error {
+  color: var(--color-destructive);
 }
 
-.nc-text-prose .callout--warn {
-  --callout-border: oklch(70% 0.15 85);
+.mermaid-block__error {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
-.nc-text-prose .callout--error {
-  --callout-border: oklch(55% 0.18 25);
+.mermaid-block__fallback {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.8rem;
 }
 
-.nc-text-prose .callout--tip {
-  --callout-border: oklch(55% 0.16 300);
+.mermaid-block__actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.nc-text-prose .collaboration-carets__caret {
-  border-left: 1px solid currentColor;
-  border-right: 1px solid currentColor;
-  margin-left: -1px;
-  margin-right: -1px;
-  position: relative;
-  word-break: normal;
-  pointer-events: none;
+.mermaid-block__edit {
+  min-height: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.nc-text-prose .collaboration-carets__label {
-  border-radius: 3px 3px 3px 0;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
-  left: -1px;
-  line-height: normal;
-  padding: 0.1rem 0.3rem;
-  position: absolute;
-  top: -1.4em;
-  user-select: none;
-  white-space: nowrap;
+.mermaid-block__edit:hover {
+  background: var(--color-accent);
+}
+
+.diagram-flow {
+  --vf-node-bg: var(--color-background);
+  --vf-node-text: var(--color-foreground);
+  --vf-node-color: var(--color-border);
+}
+
+.diagram-flow .vue-flow {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.diagram-flow-node--selected {
+  box-shadow: 0 0 0 2px var(--color-ring);
 }
