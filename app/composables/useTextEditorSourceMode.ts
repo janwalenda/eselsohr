@@ -160,6 +160,16 @@ export function useTextEditorSourceMode(sourceMarkdown: Ref<string>, markDirty: 
     markDirty();
   }
 
+  /** Pull the latest contenteditable text into the reactive source before mode switches. */
+  function flushFromEditor() {
+    if (!sourceEditorRef.value) {
+      return sourceMarkdown.value;
+    }
+
+    sourceMarkdown.value = sourceEditorRef.value.textContent ?? "";
+    return sourceMarkdown.value;
+  }
+
   return {
     sourceTextareaRef,
     sourceEditorRef,
@@ -167,5 +177,6 @@ export function useTextEditorSourceMode(sourceMarkdown: Ref<string>, markDirty: 
     syncEditorFromMarkdown,
     applySourceEdit,
     onSourceInput,
+    flushFromEditor,
   };
 }

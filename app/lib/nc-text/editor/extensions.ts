@@ -18,6 +18,7 @@ import type { Awareness } from "y-protocols/awareness";
 import type { CollectivePage } from "~~/shared/collectives";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 import { Callout } from "./Callout";
+import { MermaidCodeBlock, type EditDiagramPayload } from "./MermaidCodeBlock";
 import { ResolvedImage } from "./ResolvedImage";
 import { WikiLink, type WikiLinkSuggestionItem } from "./WikiLink";
 
@@ -40,6 +41,8 @@ export interface BuildExtensionsOptions {
   wikiLinkSuggestion?: Partial<
     Omit<SuggestionOptions<WikiLinkSuggestionItem, WikiLinkSuggestionItem>, "editor">
   >;
+  /** Opens the visual Mermaid diagram builder for an existing mermaid code block. */
+  onEditDiagram?: (payload: EditDiagramPayload) => void;
 }
 
 export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtension[] {
@@ -52,6 +55,7 @@ export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtens
     pages = [],
     enableWikiLinkSuggestion = false,
     wikiLinkSuggestion,
+    onEditDiagram,
   } = options;
 
   const extensions: AnyExtension[] = [
@@ -60,11 +64,15 @@ export function buildExtensions(options: BuildExtensionsOptions = {}): AnyExtens
     // keep round-tripping clean.
     // Prevent accidental navigation while editing; clicks are handled in
     // TextCollaborativeEditor (reading mode + Cmd/Ctrl+click in edit mode).
+    // Mermaid lives in a codeBlock node (schema-compatible with Nextcloud Text),
+    // so StarterKit's built-in codeBlock is replaced by MermaidCodeBlock.
     StarterKit.configure({
       undoRedo: false,
       underline: false,
+      codeBlock: false,
       link: { openOnClick: false },
     }),
+    MermaidCodeBlock.configure({ onEditDiagram }),
     Table.configure({ resizable: false }),
     TableRow,
     TableHeader,

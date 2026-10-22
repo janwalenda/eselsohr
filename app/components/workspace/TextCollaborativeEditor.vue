@@ -3,6 +3,7 @@ import EditorViewModeToggle from "@/components/workspace/EditorViewModeToggle.vu
 import TextEditorToolbar from "@/components/workspace/TextEditorToolbar.vue";
 import TextEditorNotices from "@/components/workspace/TextEditorNotices.vue";
 import TextEditorContent from "@/components/workspace/TextEditorContent.vue";
+import DiagramBuilderDialog from "@/components/workspace/DiagramBuilderDialog.vue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCollaborativeEditor } from "@/composables/useCollaborativeEditor";
 import type { PageProperties } from "~~/shared/properties";
@@ -37,6 +38,8 @@ const {
   showFormattingToolbar,
   switchViewMode,
   commands,
+  diagramDialog,
+  confirmDiagram,
   scheduleSave,
 } = useCollaborativeEditor({
   collectiveId: () => props.collectiveId,
@@ -108,6 +111,13 @@ defineExpose({
       :source-editor-ref="sourceEditorRef"
       @update:source-editor-ref="setSourceEditorRef"
       @source-input="onSourceInput"
+    />
+
+    <DiagramBuilderDialog
+      v-model:open="diagramDialog.open"
+      :mode="diagramDialog.mode"
+      :source="diagramDialog.source"
+      @confirm="confirmDiagram"
     />
   </div>
 </template>

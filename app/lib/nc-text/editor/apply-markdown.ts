@@ -12,11 +12,12 @@ import { XmlFragment } from "yjs";
 import { parseMarkdownFile } from "~~/shared/frontmatter";
 import { buildExtensions } from "./extensions";
 import markdownit from "./markdownit";
+import { ensureClosedFencedCodeBlocks } from "./source-mode";
 
 export const APPLY_MARKDOWN_ORIGIN = "apply-markdown";
 
 export function markdownToProseMirrorNode(content: string): ProseMirrorNode {
-  const body = parseMarkdownFile(content).body;
+  const body = ensureClosedFencedCodeBlocks(parseMarkdownFile(content).body);
 
   const html = `${markdownit.render(body)} `;
 
