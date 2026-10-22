@@ -270,6 +270,7 @@ export function useCollaborativeEditor(options: {
 
     if (previous === "source" && next !== "source") {
       const flushed = sourceMode.flushFromEditor();
+
       const parsed = parseMarkdownFile(flushed);
 
       const nextProperties =

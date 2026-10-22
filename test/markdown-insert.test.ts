@@ -132,7 +132,9 @@ describe("source-mode", () => {
 
   it("keeps unclosed mermaid fences as language-mermaid code blocks", () => {
     const input = "```mermaid\nflowchart TD\n  A -->\n\nHallo";
+
     const node = markdownToProseMirrorNode(input);
+
     const markdown = serializeMarkdown(node);
 
     expect(markdown).toContain("```mermaid");
