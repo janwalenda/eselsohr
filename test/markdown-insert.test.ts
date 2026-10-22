@@ -14,7 +14,10 @@ import {
   wrapSelection,
 } from "../app/lib/nc-text/editor/markdown-insert";
 import { serializeMarkdown } from "../app/lib/nc-text/editor/markdown-serializer";
-import { shouldApplySourceMarkdownOnModeSwitch } from "../app/lib/nc-text/editor/source-mode";
+import {
+  ensureClosedFencedCodeBlocks,
+  shouldApplySourceMarkdownOnModeSwitch,
+} from "../app/lib/nc-text/editor/source-mode";
 
 function createTextarea(initial = "", start = initial.length, end = initial.length) {
   const textarea = document.createElement("textarea");
@@ -113,5 +116,28 @@ describe("source-mode", () => {
 
   it("applies source markdown when no remote staleness was detected", () => {
     expect(shouldApplySourceMarkdownOnModeSwitch(false)).toBe(true);
+  });
+
+  it("closes an unclosed mermaid fence before leave-source apply", () => {
+    const input = "```mermaid\nflowchart TD\n  A[Start]\n  B[Ende]\n  A --> B\n\nHallo";
+
+    expect(ensureClosedFencedCodeBlocks(input)).toBe(`${input}\n\`\`\`\n`);
+  });
+
+  it("leaves already closed fences unchanged", () => {
+    const input = "```mermaid\nflowchart TD\n  A --> B\n```\n\nHallo\n";
+
+    expect(ensureClosedFencedCodeBlocks(input)).toBe(input);
+  });
+
+  it("keeps unclosed mermaid fences as language-mermaid code blocks", () => {
+    const input = "```mermaid\nflowchart TD\n  A -->\n\nHallo";
+    const node = markdownToProseMirrorNode(input);
+    const markdown = serializeMarkdown(node);
+
+    expect(markdown).toContain("```mermaid");
+    expect(markdown).toContain("A -->");
+    expect(markdown).toContain("Hallo");
+    expect(markdown.trimEnd().endsWith("```")).toBe(true);
   });
 });

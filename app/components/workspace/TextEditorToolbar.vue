@@ -30,10 +30,12 @@ const actions = computed(() =>
         size="icon"
         :class="{ 'bg-accent': action.isActive?.() }"
         :disabled="action.disabled ?? toolbarDisabled"
+        :aria-label="action.ariaLabel"
+        :title="action.ariaLabel"
         @click="action.action()"
       >
-        <component :is="action.icon" v-if="action.icon" class="size-4" />
-        <span v-else class="size-4 font-mono text-xs">{{ action.label }}</span>
+        <component :is="action.icon" v-if="action.icon" class="size-4" aria-hidden="true" />
+        <span v-else class="size-4 font-mono text-xs" aria-hidden="true">{{ action.label }}</span>
       </Button>
     </template>
   </div>

@@ -269,7 +269,8 @@ export function useCollaborativeEditor(options: {
     const previous = viewMode.value;
 
     if (previous === "source" && next !== "source") {
-      const parsed = parseMarkdownFile(sourceMarkdown.value);
+      const flushed = sourceMode.flushFromEditor();
+      const parsed = parseMarkdownFile(flushed);
 
       const nextProperties =
         Object.keys(parsed.properties).length > 0 ? parsed.properties : toValue(properties);
