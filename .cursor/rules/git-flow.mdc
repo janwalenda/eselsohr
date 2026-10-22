@@ -1,0 +1,40 @@
+---
+description: Classic Git Flow branching model for this project
+alwaysApply: true
+---
+
+# Git Flow
+
+This project follows classic [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/).
+
+## Branches
+
+| Branch | Role |
+|--------|------|
+| `main` | Production releases only |
+| `develop` | Integration / next release |
+| `feature/*` | New work from `develop` → merge back into `develop` |
+| `release/*` | Release prep from `develop` → merge into `main` and `develop` |
+| `hotfix/*` | Urgent fixes from `main` → merge into `main` and `develop` |
+
+## Agent behavior
+
+- Branch features from `develop`, never from `main`.
+- Open feature PRs against `develop`.
+- Promote to `main` only via `release/*` (or `hotfix/*`).
+- After a release/hotfix merge to `main`, also merge back into `develop`.
+- Do not push feature work directly to `main`.
+
+## Before every `git push`
+
+Always run locally (and fix failures) **before** any `git push`:
+
+```bash
+npm run lint
+npm run format:check
+```
+
+- If lint fails: `npm run lint:fix`, then re-run `npm run lint`.
+- If Prettier fails: `npm run format`, then re-run `npm run format:check`.
+- Include any auto-fixed files in a commit before pushing.
+- Do not push with known lint/format failures (Netlify `prebuild` will reject them).
